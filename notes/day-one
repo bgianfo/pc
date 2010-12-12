@@ -1,0 +1,23 @@
+
+   Day 1
+============
+
+    SMP                             VS                     Cluster
+   -----                          ------                 -----------
+ + faster data b/w CPU                               - Slower data transfer between CPU
+
+ - CPU ( cache coherence )                           + Programmer controls all data transfer 
+   controls some data transfers
+
+ - Less scalable in CPU/Memory                       + Scalable in CPU/Memoery
+
+ - Price/performance ration is higher                + Price/performance ratio is lowers
+
+                                                     + Job scheduling easier
+                                                    
+ + Smaller, cooler                                   - Larger, hotter
+
+
+   Day 2
+============
+
