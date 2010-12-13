@@ -9,7 +9,8 @@ PJ = ../pj.jar:.
 
 TARGET = PrimeTesterSmp
 
-default: run
+default: class
+
 run: class
 	$(EX) -cp $(PJ) $(TARGET)
 
