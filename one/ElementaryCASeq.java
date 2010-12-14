@@ -6,6 +6,8 @@
 //
 //******************************************************************************
 
+import edu.rit.pj.Comm;
+
 /**
  * Class ElementaryCASeq is the sequential version of the first program illustrating
  * parallel computing.
@@ -22,7 +24,7 @@ public class ElementaryCASeq {
 
   static int size;
   static int steps;
-  static byte[] rule;
+  static byte[] rule = new byte[8];
   static byte[] grid;
   static byte[] nextGrid;
 
@@ -31,7 +33,7 @@ public class ElementaryCASeq {
   /**
    * Usage statement
    */
-  public static void usage() {
+  private static void usage() {
     System.out.println( "Usage: ElementaryCASeq <rule> <gridSize> <numSteps>\n" );
     System.out.println( "   <rule> - The rule to execute ( an integer ) " );
     System.out.println( "   <gridSize> - The size of the grid ( and integer )" );
@@ -41,7 +43,7 @@ public class ElementaryCASeq {
   /**
    * Get the individual bit of an integer.
    */
-  public static int getBit( int data, int bit ) {
+  private static int getBit( int data, int bit ) {
     int mask = 1 << bit;
     return (data & mask) == mask ? 1 : 0;
   }
@@ -49,64 +51,93 @@ public class ElementaryCASeq {
   /**
    * Parse the rule into individual bits.
    */
-  public static void setupRule( int ruleValue ) {
+  private static void setupRule( int ruleValue ) {
     for ( int i = 0; i < 8; i++ ) {
       rule[i] = (byte)getBit( ruleValue, i );
     }
   }
 
   /**
-   * Main program entry point
+   * Parse command line arguments and do some initializing.
    */
-  public static void main( String[] args ) {
+  private static void parseArgs( String[] args ) {
 
-    if ( args.length < 3 ) {
-      usage();
-      return;
-    }
+    int ruleValue;
 
-    long start = System.currentTimeMillis();
+    ruleValue = Integer.parseInt( args[0] );
+    size      = Integer.parseInt( args[1] );
+    steps     = Integer.parseInt( args[2] );
 
-    rule = new byte[8];
-    setupRule( Integer.parseInt( args[0] ) );
+    setupRule( ruleValue );
 
-    size = Integer.parseInt( args[1] );
+    grid      = new byte[size];
+    nextGrid  = new byte[size];
+  }
 
-    grid = new byte[size];
-    nextGrid = new byte[size];
-
-    steps = Integer.parseInt( args[2] );
-
-    grid[size/2] = 1;
-
-    for ( int step = 0; step < steps; step++ ) {
-
-      for ( int cell = 0; cell < size; cell++ ) {
-
-        int prev = (cell+size-1) % size;
-        int next = (cell+1) % size;
-        int bit = (grid[prev]*4)+(grid[cell]*2)+(grid[next]*1);
-
-        nextGrid[cell] = rule[bit];
-      }
-
-      byte[] tmp = grid;
-      grid = nextGrid;
-      nextGrid = tmp;
-
-    }
-
-    // Count bits with value 1 in the final grid
+  /**
+   * Get the number of cell's with value 1
+   */
+  private static int getCount() {
     int counter = 0;
     for ( int cell = 0; cell < size; cell++ ) {
       if ( grid[cell] == 1 ) {
         counter++;
       }
     }
-
-    System.out.println( counter );
-    long stop = System.currentTimeMillis();
-    System.out.println("Program running time = "+(stop-start)+" msec");
+    return counter;
   }
 
+  /**
+   * Swap the current grid with the nextGrid
+   */
+  private static void swap() {
+    byte[] old = grid;
+    grid = nextGrid;
+    nextGrid = old;
+  }
+
+  /**
+   * Main program entry point
+   */
+  public static void main( String[] args ) throws Exception {
+
+    long start = System.currentTimeMillis();
+
+    // Check commandline arguments
+    if ( args.length < 3 ) {
+      usage();
+      return;
+    }
+
+    // Initialize parallel infrastructure
+    Comm.init( args );
+
+    // Parse the command line arguments
+    parseArgs( args );
+
+    // Seed the grid with a single set bit.
+    grid[size/2] = 1;
+
+    for ( int step = 0; step < steps; step++ ) {
+
+      for ( int iCell = 0; iCell < size; iCell++ ) {
+
+        // Compute previous and next cell indices
+        int iPrev = (iCell+size-1) % size;
+        int iNext = (iCell+1) % size;
+
+        // Compute which bit of the rule to use
+        int bit = (grid[iPrev]*4)+(grid[iCell]*2)+(grid[iNext]*1);
+
+        nextGrid[iCell] = rule[bit];
+      }
+      // Swap the current grid with the nextGrid
+      swap();
+    }
+
+    // Count bits with value 1 in the final grid
+    System.out.println( getCount() );
+    System.out.println( "Running time = " +
+                        (System.currentTimeMillis()-start) + " msec" );
+  }
 }

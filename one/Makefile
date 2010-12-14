@@ -4,7 +4,7 @@
 #
 ############################################################
 EX = java
-CC = javac
+CC = javac -Xlint:all
 PJ = ../pj.jar:.
 
 TARGET = PrimeTesterSmp
