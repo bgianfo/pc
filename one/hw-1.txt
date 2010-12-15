@@ -13,10 +13,17 @@ Assignment: Homework #1
                ------------------------------------
                | Seq |  405,010 |  XXXXX  | XXXXX |
                ------------------------------------
-               |  8  |  51,014  |         |       |
+               |  8  |  51,014  |  7.939  | 0.992 |
                ------------------------------------
 
       Explain why this set of integers leads to high efficiency:
+
+        All of the numbers chosen were known primes, each individual
+        prime takes significant computation to prove that it is prime. 
+
+        Since each prime takes a significant amount of computation,
+        with very little memory use, the problem scaled very well 
+        when parallelized.
 
 1b. (10pts) 
 
@@ -30,10 +37,18 @@ Assignment: Homework #1
                ------------------------------------
                | Seq |   54571  | XXXXXXX | XXXXX |
                ------------------------------------
-               |  8  |   54614  |         |       |
+               |  8  |   54614  | 0.99921 | 0.124 |
                ------------------------------------
 
       Explain why this set of integers leads to low efficiency:
 
+        All of the numbers chosen were known to be non-primes except for the
+        last one, each non-prime can be proven non-prime almost instantaneously
+        only the last prime requires significant computation to prove that it
+        is prime. 
 
+        Since each non-prime takes almost no computation to finish, the
+        overhead of setting up the threads in Parallel Java seems to
+        take more time than the actual computation done by that thread.
+        This leaves us with a sequential runtime faster than the parallel.
 
