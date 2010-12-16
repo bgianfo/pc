@@ -4,7 +4,6 @@ import edu.rit.pj.ParallelRegion;
 import edu.rit.pj.ParallelTeam;
 import edu.rit.pj.IntegerForLoop;
 import edu.rit.pj.BarrierAction;
-import edu.rit.pj.reduction.SharedInteger;
 
 
 /**
@@ -146,7 +145,6 @@ public class ElementaryCASmp {
             }
 
           });
-
         }
       }
     });
