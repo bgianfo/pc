@@ -72,10 +72,8 @@ public class ElementaryCASeq {
    */
   private static int getCount() {
     int counter = 0;
-    for ( int cell = 0; cell < size; cell++ ) {
-      if ( grid[cell] == 1 ) {
-        counter++;
-      }
+    for ( int cell = 0; cell < size; ++cell ) {
+      counter += grid[cell];
     }
     return counter;
   }
