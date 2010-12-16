@@ -23,4 +23,5 @@ bundle:
 	zip hw1.zip hw1-1.txt hw1-2.txt ElementaryCASeq.java ElementaryCASmp.java hw1-3.txt
 clean:
 	rm -rf *.class
+	rm -rf *.zip
 
