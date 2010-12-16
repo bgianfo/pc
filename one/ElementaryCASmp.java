@@ -1,10 +1,3 @@
-//******************************************************************************
-//
-// File:    ElementaryCASmp.java
-// Package: ---
-// Unit:    Class ElementaryCASmp
-//
-//******************************************************************************
 
 import edu.rit.pj.Comm;
 import edu.rit.pj.ParallelRegion;
@@ -15,8 +8,7 @@ import edu.rit.pj.reduction.SharedInteger;
 
 
 /**
- * Class ElementaryCASmp is the sequential version of the first program illustrating
- * parallel computing.
+ * Class ElementaryCASmp is the parallel version of the Elementary Cellular Automaton.
  * <P>
  * Usage: java ElementaryCASeq <I>rule</I> <I>gridSize</I> <I>numSteps</I>
  * <BR><I>rule</I> - The rule to execute ( an integer )
@@ -40,6 +32,7 @@ public class ElementaryCASmp {
    * Usage statement
    */
   private static void usage() {
+    System.out.println("");
     System.out.println( "Usage: ElementaryCASeq <rule> <gridSize> <numSteps>\n" );
     System.out.println( "   <rule> - The rule to execute ( an integer ) " );
     System.out.println( "   <gridSize> - The size of the grid ( and integer )" );
@@ -149,11 +142,15 @@ public class ElementaryCASmp {
               }
             }
           },
+          // Swap current with the next grid
           new BarrierAction() {
+
             public void run() throws Exception {
               swap();
             }
+
           });
+
         }
       }
     });

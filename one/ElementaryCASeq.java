@@ -1,16 +1,8 @@
-//******************************************************************************
-//
-// File:    ElementaryCASeq.java
-// Package: ---
-// Unit:    Class ElementaryCASeq
-//
-//******************************************************************************
 
 import edu.rit.pj.Comm;
 
 /**
- * Class ElementaryCASeq is the sequential version of the first program illustrating
- * parallel computing.
+ * Class ElementaryCASeq is the sequential version of the Elementary Cellular Automaton 
  * <P>
  * Usage: java ElementaryCASeq <I>rule</I> <I>gridSize</I> <I>numSteps</I>
  * <BR><I>rule</I> - The rule to execute ( an integer )
@@ -34,6 +26,7 @@ public class ElementaryCASeq {
    * Usage statement
    */
   private static void usage() {
+    System.out.println("");
     System.out.println( "Usage: ElementaryCASeq <rule> <gridSize> <numSteps>\n" );
     System.out.println( "   <rule> - The rule to execute ( an integer ) " );
     System.out.println( "   <gridSize> - The size of the grid ( and integer )" );
