@@ -1,7 +1,7 @@
 Author: Brian Gianforcaro ( bjg1955@rit.edu )
 Assignment: Homework #1
 
-1a. (10pts)
+Part 1a:
 
           1)  2305843009213694207 2)  2305843009213694257
           3)  2305843009213694317 4)  2305843009213694323
@@ -25,7 +25,7 @@ Assignment: Homework #1
         with very little memory use, the problem scaled very well 
         when parallelized.
 
-1b. (10pts) 
+Part 1b:
 
           1)  2305843009213693952 2)  2305843009213693953
           3)  2305843009213693954 4)  2305843009213693955

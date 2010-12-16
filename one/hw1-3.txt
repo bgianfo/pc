@@ -1,13 +1,73 @@
 Author: Brian Gianforcaro ( bjg1955@rit.edu )
 Assignment: Homework #1
 
-3.
-     ---------------------------=-------------------
+Part 3:
+
+  A description of the sequential dependencies of ElementaryCASeq:
+
+
+    The sequential algorithm has very few sequential dependencies.
+
+    The initial argument parsing, rule initialization, and data structure
+    allocation are all sequential in nature and very fast.
+
+    The other piece that is required to be run in sequence is each 
+    individual "step" of the cellular evolution. Each step depends
+    on the results of the previous. However every cell's computation
+    inside each step is in no way dependent on any other cell. Seeing
+    as this is the where the majority of the computation occurs it 
+    would appear this program is a good candidate for parallelization.
+
+
+  A description of the parallel design pattern of ElementaryCASmp:
+
+    
+    I used my analysis of the sequential program to try to create
+    the most optimal parallel version of the algorithm. Data initialization
+    as well as argument parsing are all done exactly as they were 
+    in the sequential version. 
+
+    For the Elementary Cellular Automaton generation computation
+    I used a parallel team, to execute a parallel region. 
+    The parallel region breaks down each step into a execution
+    of a parallel integer for loop of the cellular automaton's data. 
+    This splits each step's work load evenly across all the available processors.
+    
+    After all threads have finished processing the current step, a Barrier Action
+    is used to synchronize the swapping of the global "grid" and "nextGrid" 
+    data members. This allows us to make sure this only happens once, and only 
+    after all threads have finished their computation.
+
+    When all steps have been run, a sequential sum of all 1 values 
+    in the final result grid is run. 
+  
+  Other Reasoning:
+
+    I also had attempted to have each CA step create it's own
+    parallel team and parallel region and parallel for loop. However
+    my results showed that the overhead of creating a new parallel 
+    team at every step was slowing down the implementation. The above
+    mentioned structure greatly improved runtime metrics. 
+
+    I had also worked on a parallel summing of all the 1 values
+    in the final grid. This ran a parallel Integer for loop over
+    the cell inside the already existing ParallelTeam & ParallelRegion.
+    A SharedInteger was used for thread safe modification of the reduction
+    variable. However the performance metrics of the final implementation
+    versus the sequential count were significantly worse. My only hypothesis 
+    is that this operation is memory bound, not computation bound. So a lot of
+    the time in the threads was spent waiting on memory access. The other idea I had
+    was that the SharedInteger Object may put a significant amount of overhead 
+    in it's lock free increment methods, versus merely incrementing a regular int data type.
+
+  Results:
+ 
+     -----------------------------------------------
      | K   | T (msec)  | Speedup  |  Eff  |  EDSF  |
      -----------------------------------------------
-     | Seq | 1,412,430 |  XXXXX   | XXXXX | XXXXXX |
+     | Seq | 1,412,430 | XXXXXXXX | XXXXX | XXXXXX |
      -----------------------------------------------
-     |  1  | 1,281,861 | 1.101858 | 1.101 |        |
+     |  1  | 1,281,861 | 1.101858 | 1.101 | XXXXXX |
      -----------------------------------------------
      |  2  |  641,332  | 2.202338 | 1.101 | -0.091 |
      -----------------------------------------------
@@ -15,6 +75,4 @@ Assignment: Homework #1
      -----------------------------------------------
      |  8  |  162,863  | 8.672503 | 1.084 | -0.011 |
      -----------------------------------------------
-
-    
 
