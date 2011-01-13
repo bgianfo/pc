@@ -3,8 +3,8 @@
 # Author: Brian Gianforcaro - b.gianfo@gmail.com
 #
 ############################################################
-EX = java
-CC = javac -Xlint:all
+#CC = javac -Xlint:all
+CC = /usr/local/versions/jdk-1.5.0_15/bin/javac -Xlint:all
 PJ = ../pj.jar:.
 
 TARGET = PrimeTesterSmp
