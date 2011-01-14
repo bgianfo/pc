@@ -1,6 +1,7 @@
 ############################################################
 #
-# Author: Brian Gianforcaro - b.gianfo@gmail.com
+#  Author: Brian Gianforcaro - b.gianfo@gmail.com
+#  Homework: #2
 #
 ############################################################
 CC = javac -Xlint:all
@@ -17,7 +18,11 @@ class: clean *.java
 zip: bundle
 
 bundle:
-	zip hw2.zip hw2-1.txt hw2-2.txt hw2-3.txt hw2-4.txt MSAreaSeq.java MSAreaSmp.java EncryptFileSeq.java EncryptFileSmpNoOverlap.java EncryptFileSmpNoOverlap.java
+	zip hw2.zip hw2-1.txt hw2-2.txt hw2-3.txt hw2-4.txt \
+	    MSAreaSeq.java MSAreaSmp.java \
+      	    EncryptFileSeq.java \
+	    EncryptFileSmpNoOverlap.java \
+	    EncryptFileSmpNoOverlap.java
 
 clean:
 	rm -rf *.class
