@@ -145,9 +145,11 @@ public class EncryptFileSmpNoOverlap {
                     }
                 });
 
-                oFile.write( cipherTextChunk );
-                // This marks EOF
-                if ( read != READSIZE ) {
+                if ( read == READSIZE ) {
+                    oFile.write( cipherTextChunk );
+                } else { // This marks EOF
+                    int writesize = (int)(Math.ceil((double)read/(double)blockSize)*blockSize);
+                    oFile.write( cipherTextChunk, 0, writesize );
                     break;
                 }
             }
