@@ -1,6 +1,8 @@
 //******************************************************************************
 //
-// File:    EncryptFilSmpNoOverlap.java
+// Author: Brian Gianforcaro (bjg1955@cs.rit.edu)
+// File:   EncryptFilSmpNoOverlap.java
+//
 //******************************************************************************
 
 import java.io.FileOutputStream;
@@ -8,15 +10,19 @@ import java.io.FileInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedInputStream;
 
-
 import edu.rit.crypto.blockcipher.AES256CipherSmp;
 import edu.rit.util.Hex;
+
 import edu.rit.pj.Comm;
+import edu.rit.pj.IntegerForLoop;
+import edu.rit.pj.ParallelRegion;
+import edu.rit.pj.ParallelTeam;
+import edu.rit.pj.BarrierAction;
 
 /**
  * Class EncryptFileSmpNoOverlap encryptes inputfile using the AES cipher. 
  * <P>
- * Usage: java Encrypt <I>key</I> <I>inFileName</I> <I>outFileName</I> <I>chunkSize</I>
+ * Usage: java EncryptFileSmpNoOverlap  <I>key</I> <I>inFileName</I> <I>outFileName</I> <I>chunkSize</I>
  * <BR><I>key</I> = Encryption key (256-bit hexadecimal number)
  * <BR><I>inFileName</I> = input file name
  * <BR><I>outFileName</I> = output file name 
@@ -28,20 +34,21 @@ import edu.rit.pj.Comm;
 public class EncryptFileSmpNoOverlap {
 
     /** Argument Constants */
-    static int KEY_ARG = 0;
-    static int INPUT_ARG = 1;
+    static int KEY_ARG    = 0;
+    static int INPUT_ARG  = 1;
     static int OUTPUT_ARG = 2;
-    static int CHUNK_ARG = 3;
+    static int CHUNK_ARG  = 3;
+    static int EOF = -1;
 
     /** Working data for enciphering */
-    static AES256CipherSmp cipher;
     static byte[] key;
+    static byte[] plainTextChunk;
+    static byte[] cipherTextChunk;
     static int chunkSize;
     static BufferedInputStream iFile;
     static BufferedOutputStream oFile;
     static int blockSize = 16;
-
-
+    static int READSIZE;
 
     /** Prevent construction */
     private EncryptFileSmpNoOverlap() { }
@@ -51,10 +58,10 @@ public class EncryptFileSmpNoOverlap {
      */
     private static void usage() {
         System.err.println("Usage: java EncryptFileSmpNoOverlap <key> <inFileName> <outFileName> <chunkSize>");
-        System.err.println("<key> = Encryption key (256-bit hexadecimal number)");
-        System.err.println("<inFileName> = input file name");
-        System.err.println("<outFileName> = output file name");
-        System.err.println("<chunkSize> = number of 16-byte blocks in a chunk");
+        System.err.println("   <key> = Encryption key (256-bit hexadecimal number)");
+        System.err.println("   <inFileName> = input file name");
+        System.err.println("   <outFileName> = output file name");
+        System.err.println("   <chunkSize> = number of 16-byte blocks in a chunk");
         System.exit(0);
     }
 
@@ -63,16 +70,34 @@ public class EncryptFileSmpNoOverlap {
      * @param block - the data block to pad
      * @param offset - the offset in the block to start the pad.
      */
-    private static void pad( byte[] block, int offset ) {
+    private static void pad( byte[] block, final int offset ) {
         for ( int i = offset; i < block.length; i++ ) {
             block[i] = (byte)0;
         }
     }
 
     /**
+     * Parse the arguments to the Encryption
+     * @param args - The arguments to the encryption
+     */
+    private static void parseArgs( String[] args ) throws Exception {
+        // Unpack arguments
+        key = Hex.toByteArray( args[KEY_ARG] );
+        chunkSize = Integer.parseInt( args[CHUNK_ARG] );
+        iFile = new BufferedInputStream( new FileInputStream( args[INPUT_ARG] ) ); 
+        oFile = new BufferedOutputStream( new FileOutputStream( args[OUTPUT_ARG] ) );
+
+        READSIZE = chunkSize*blockSize;
+
+        // Initialize the working blocks
+        plainTextChunk = new byte[READSIZE];
+        cipherTextChunk = new byte[READSIZE];
+    }
+
+    /**
      * EncryptFileSmpNoOverlap main program.
      */
-    public static void main (String[] args) throws Exception {
+    public static void main( final String[] args ) throws Exception {
 
         // Start timer
         long t1 = System.currentTimeMillis();
@@ -81,79 +106,52 @@ public class EncryptFileSmpNoOverlap {
         Comm.init( args );
 
         // Parse command line arguments.
-        if ( args.length != 3 ) {
+        if ( args.length != 4 ) {
           usage();
         }
 
-        // Unpack arguments
-        key = Hex.toByteArray( args[KEY_ARG] );
-        chunkSize = Integer.parseInt( args[CHUNK_ARG] );
-        iFile = new BufferedInputStream( new FileInputStream( args[INPUT_ARG] ) ); 
-        oFile = new BufferedOutputStream( new FileOutputStream( args[OUTPUT_ARG] ) );
+        parseArgs( args );
 
-        // Initialize the cipher and working blocks
-        if ( key.length != cipher.getKeyLength() ) {
-            System.out.println("Error: Key length is not long enough");
-            usage();
-        }
-        
-        byte[] plainTextChunk = new byte[blockSize*chunkSize];
-        byte[] cipherTextChunk = new byte[blockSize*chunkSize];
+        ParallelTeam team = new ParallelTeam();
 
-        // Compute all rows and columns.
-        new ParallelTeam().execute( new ParallelRegion() {
-            public void run() throws Exception {
-                while ( true ) {
+        int read;
+        while ( true ) {
 
-                    int read = iFile.read( plainTextChunk );
+            read = iFile.read( plainTextChunk );
+            if ( read == EOF ) {
+                break;
+            } else {
+                // If we didn't read an entire block 
+                // we have to pad the rest of the data.
+                if ( read < READSIZE ) {
+                    pad( plainTextChunk, read );
+                }
 
-                    // If we didn't read an entire block 
-                    // we have to pad the rest of the data.
-                    if ( read != blockSize*chunkSize ) {
-                        if ( read == -1 ) {
-                            break;
-                        }
-                        pad( plainTextChunk, read );
-                    }
+                team.execute( new ParallelRegion() {
+                    public void run() throws Exception {
+                        execute( 0, chunkSize-1, new IntegerForLoop() {
+                            public void run( int first, int last ) {
+                                byte[] plainText   = new byte[blockSize];
+                                byte[] cipherText  = new byte[blockSize];
+                                AES256CipherSmp cipher = new AES256CipherSmp( key );
+                                for ( int chunk = first; chunk <= last; chunk++ ) {
 
-            
-                    execute( 0, read/blockSize, new IntegerForLoop() {
-
-                        byte[] plainText;
-                        byte[] cipherTextli;
-                        AES256CipherSmp cipher;
-
-                        /** Initilalize the per thread working blocks and the cipher */
-                        public void start() {
-                            plainText = new byte[blockSize];
-                            cipherTextli = new byte[blockSize];
-                            cipher = new AES256CipherSmp( key );
-                        }
-
-                        public void run( int first, int last ) {
-
-                            for ( int chunk = first; chunk <= last; chunk++ ) {
-
-                                System.array.copy( plainTextChunk, chunk*blockSize,
-                                                   plainText, 0, blockSize );
-
-                                cipher.encrypt( plainText, cipherText );
-
-                                System.array.copy( cipherText, 0,
-                                                   cipherTextChunk, chunk*blockSize, blockSize );
+                                    System.arraycopy( plainTextChunk, chunk*blockSize, plainText, 0, blockSize );
+                                    cipher.encrypt( plainText, cipherText );
+                                    System.arraycopy( cipherText, 0, cipherTextChunk, chunk*blockSize, blockSize );
+                                }
                             }
-                        }
-                    });
-
-                    oFile.write( cipherTextChunk );
-
-                    // This marks EOF
-                    if ( read != blockSize*chunkSize ) {
-                        break;
+                        });
                     }
+                });
+
+                oFile.write( cipherTextChunk );
+                // This marks EOF
+                if ( read != READSIZE ) {
+                    break;
                 }
             }
-        });
+        }
 
         oFile.close();
         iFile.close();
