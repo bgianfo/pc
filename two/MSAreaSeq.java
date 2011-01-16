@@ -7,6 +7,8 @@
 
 import edu.rit.pj.Comm;
 
+import edu.rit.util.Random;
+
 /**
  * Class MSAreaSeq is a sequential program that calculates the Area of the Mandelbrot Set.
  * <P>
@@ -20,14 +22,10 @@ import edu.rit.pj.Comm;
  */
 public class MSAreaSeq
 {
-
     /** Command line arguments. */
     static long seed;
-
     static int maxiter;
-
     static long N;
-
 
     /** Prevent construction. */
     private MSAreaSeq(){ }
@@ -42,7 +40,6 @@ public class MSAreaSeq
         System.err.println("<N> = The number of random points (a long)");
         System.exit(1);
     }
-
 
     /**
      * Mandelbrot Set main program.
@@ -61,6 +58,43 @@ public class MSAreaSeq
         maxiter = Integer.parseInt( args[1] );
         N = Long.parseLong(args[2]);
 
+        double numPoints = 0.0;
+        double numMembers = 0.0;
+
+        Random prng = Random.getInstance( seed );
+
+        for ( long n = 0; n < N; n++ ) {
+            double x = (prng.nextDouble()*4)-2;
+            double y = (prng.nextDouble()*4)-2;
+            //System.out.println("x = " + x );
+            //System.out.println("y = " + y );
+            int i = 0;
+            double aold = 0.0;
+            double bold = 0.0;
+            double a = 0.0;
+            double b = 0.0;
+            double zmagsqr = 0.0;
+            while ( i < maxiter && zmagsqr <= 4.0 ) {
+                ++i;
+                a = aold*aold - bold*bold + x;
+                b = 2.0*aold*bold + y;
+                zmagsqr = a*a + b*b;
+                aold = a;
+                bold = b;
+            }
+
+            if ( i == maxiter ) {
+                numMembers++;
+            }
+            numPoints++;
+        }
+
+        // Sample area is -2 to 2 for x and y
+        double sampleArea = 4.0*4.0;
+
+        double area = ((numMembers*sampleArea)/numPoints);
+
+        System.out.println("MS area = " + area );
         // Stop timing.
         System.out.println((System.currentTimeMillis()-t1) + " msec");
     }
