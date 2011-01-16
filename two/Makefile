@@ -21,15 +21,16 @@ bundle:
 	    MSAreaSeq.java MSAreaSmp.java \
       	    EncryptFileSeq.java \
 	    EncryptFileSmpNoOverlap.java \
-	    EncryptFileSmpNoOverlap.java
+	    EncryptFileSmpOverlap.java
 
 test: clean class test-phoney clean
 
 test-phoney:
-	java -cp ../pj.jar:. -Dpj.nt=1 EncryptFileSmpNoOverlap $(AESKEY) data/pg100.txt test-pg100.enc 20
+	java -cp ../pj.jar:. EncryptFileSmpNoOverlap $(AESKEY) data/pg100.txt test-pg100.enc 20
+	rm -rf test-pg100*
+	java -cp ../pj.jar:. EncryptFileSmpOverlap $(AESKEY) data/pg100.txt test-pg100.enc 20
 	hexdump test-pg100.enc > test-pg100.enc.hex
 	diff -u data/pg100.enc.hex test-pg100.enc.hex
-
 
 clean:
 	rm -rf test-pg100*
