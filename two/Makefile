@@ -32,6 +32,12 @@ test-phoney:
 	hexdump test-pg100.enc > test-pg100.enc.hex
 	diff -u data/pg100.enc.hex test-pg100.enc.hex
 
+testms: clean class testms-phoney clean
+	java -cp ../pj.jar:. MSAreaSmp 54321 5000 20000000
+	java -cp ../pj.jar:. MSAreaSeq 54321 5000 20000000
+
+testms-phoney: 
+
 clean:
 	rm -rf test-pg100*
 	rm -rf *.class
