@@ -9,16 +9,13 @@ import edu.rit.pj.Comm;
 import edu.rit.pj.ParallelTeam;
 import edu.rit.pj.ParallelRegion;
 import edu.rit.pj.LongForLoop;
-import edu.rit.pj.LongForLoop;
-
 import edu.rit.pj.reduction.SharedDouble;
-
 import edu.rit.util.Random;
 
 /**
- * Class MSAreaSmp is a sequential program that calculates the Area of the Mandelbrot Set.
+ * Class MSAreaSmp is a parallel program that calculates the Area of the Mandelbrot Set.
  * <P>
- * Usage: java MSAreaeq <I>seed</I> <I>maxiter</I> <I>N</I>
+ * Usage: java MSAreaSmp <I>seed</I> <I>maxiter</I> <I>N</I>
  * <BR><I>seed</I> = random sed (a long)
  * <BR><I>maxiter</I> = maximum number of iterations (an int)
  * <BR><I>N</I> = The number of random points (a long) 
@@ -76,6 +73,7 @@ public class MSAreaSmp
                     public void run( long first, long last ) {
 
                         Random prng = Random.getInstance( seed );
+                        // Skip to this threads random numbers
                         prng.skip(first*2);
 
                         for ( long n = first; n <= last; n++ ) {
@@ -108,14 +106,10 @@ public class MSAreaSmp
 
         // Sample area is -2 to 2 for x and y
         double sampleArea = 4.0*4.0;
-
         double area = ((numMembers.doubleValue()*sampleArea)/numPoints.doubleValue());
-
         System.out.println("MS area = " + area );
- 
 
         // Stop timing.
         System.out.println((System.currentTimeMillis()-t1) + " msec");
     }
-
 }

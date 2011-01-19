@@ -6,13 +6,12 @@
 //******************************************************************************
 
 import edu.rit.pj.Comm;
-
 import edu.rit.util.Random;
 
 /**
  * Class MSAreaSeq is a sequential program that calculates the Area of the Mandelbrot Set.
  * <P>
- * Usage: java MSAreaeq <I>seed</I> <I>maxiter</I> <I>N</I>
+ * Usage: java MSAreaSeq <I>seed</I> <I>maxiter</I> <I>N</I>
  * <BR><I>seed</I> = random sed (a long)
  * <BR><I>maxiter</I> = maximum number of iterations (an int)
  * <BR><I>N</I> = The number of random points (a long) 
@@ -66,8 +65,6 @@ public class MSAreaSeq
         for ( long n = 0; n < N; n++ ) {
             double x = (prng.nextDouble()*4)-2;
             double y = (prng.nextDouble()*4)-2;
-            //System.out.println("x = " + x );
-            //System.out.println("y = " + y );
             int i = 0;
             double aold = 0.0;
             double bold = 0.0;
@@ -98,5 +95,4 @@ public class MSAreaSeq
         // Stop timing.
         System.out.println((System.currentTimeMillis()-t1) + " msec");
     }
-
 }
