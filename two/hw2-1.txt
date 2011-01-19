@@ -1,0 +1,108 @@
+ 
+ Author: Brian Gianforcaro (bjg1955@cs.rit.edu)
+ Homework: #2-1
+
+
+ 1a) Parameters: 3200 9600 -0.75 4 1200 2500 0.4 ms.pjg
+
+      -------------------------------------------------  
+      | Schedule      | K | T(msec) | Speedup  | Eff  |
+      |-----------------------------------------------|
+      | xxxxxxxxxxxxx |seq|  48963  | xxxxxxxx | xxxx |
+      |-----------------------------------------------|
+      | fixed         | 1 |  49096  |  0.9972  | 0.99 |
+      | fixed         | 2 |  48676  |  1.0058  | 0.50 |
+      | fixed         | 4 |  48039  |  1.0192  | 0.25 |
+      | fixed         | 8 |  47603  |  1.0285  | 0.12 |
+      |-----------------------------------------------|
+      | dynamic       | 1 |  49139  |  0.9964  | 0.99 |
+      | dynamic       | 2 |  26087  |  1.8769  | 0.93 |
+      | dynamic       | 4 |  14197  |  3.4488  | 0.86 |
+      | dynamic       | 8 |   8571  |  5.7126  | 0.71 |
+      |-----------------------------------------------|
+      | dynamic(300)  | 1 |  49061  |  0.9980  | 0.99 |
+      | dynamic(300)  | 2 |  32776  |  1.4938  | 0.74 |
+      | dynamic(300)  | 4 |  25548  |  1.9165  | 0.47 |
+      | dynamic(300)  | 8 |  25320  |  1.9337  | 0.24 |
+      |-----------------------------------------------|
+      | guided        | 1 |  49034  |  0.9985  | 0.99 |
+      | guided        | 2 |  26124  |  1.8742  | 0.93 |
+      | guided        | 4 |  14297  |  3.4247  | 0.85 |
+      | guided        | 8 |   8386  |  5.8386  | 0.72 |
+      |-----------------------------------------------|
+      | guided(300)   | 1 |  48979  |  0.9996  | 0.99 |
+      | guided(300)   | 2 |  29006  |  1.6880  | 0.84 |
+      | guided(300)   | 4 |  22625  |  2.1641  | 0.54 |
+      | guided(300)   | 8 |  20104  |  2.4354  | 0.30 |
+      -------------------------------------------------
+
+   Explanation:
+
+   Due to the nature of the Mandelbrot Set calculation
+   the schedule used when computing set member ship
+   effects performance drastically. Since different
+   sections of the Mandelbrot set are more computationally
+   extensive, therefor single threads can get bogged down
+   with "harder" chunks of data and bog down runtime.
+
+   As you can see in the above data table the default
+   "dynamic" & "guided" schedule with their small chunk
+   sizes perform drastically better than all the other 
+   tested schedules. I believe this is because these 
+   schedules allow "harder" chunks to get distributed
+   evenly across multiple threads and they dynamically
+   adjust for threads finishing faster or slower than
+   normal.
+
+
+ 1b) Parameters: 3200 9600 -0.75 -4 1200 2500 0.4 ms.pjg
+
+      -------------------------------------------------
+      | Schedule      | K | T(msec) | Speedup  | Eff  |
+      |-----------------------------------------------|
+      | xxxxxxxxxxxxx |seq|  46934  | xxxxxxxx | xxxx |
+      |-----------------------------------------------|
+      | fixed         | 1 |  47366  |  0.99087 | 0.99 |
+      | fixed         | 2 |  46232  |  1.01518 | 0.50 |
+      | fixed         | 4 |  48701  |  0.96371 | 0.24 |
+      | fixed         | 8 |  47315  |  0.99194 | 0.12 |
+      |-----------------------------------------------|
+      | dynamic       | 1 |  47059  |  0.99734 | 0.99 |
+      | dynamic       | 2 |  24783  |  1.89379 | 0.94 |
+      | dynamic       | 4 |  13316  |  3.52463 | 0.88 |
+      | dynamic       | 8 |   7751  |  6.05521 | 0.75 |
+      |-----------------------------------------------|
+      | dynamic(300)  | 1 |  47087  |  0.99675 | 0.99 |
+      | dynamic(300)  | 2 |  24323  |  1.92961 | 0.96 |
+      | dynamic(300)  | 4 |  23524  |  1.99515 | 0.49 |
+      | dynamic(300)  | 8 |  24323  |  1.92961 | 0.24 |
+      |-----------------------------------------------|
+      | guided        | 1 |  47233  |  0.99369 | 0.99 |
+      | guided        | 2 |  46889  |  1.00099 | 0.50 |
+      | guided        | 4 |  45252  |  1.03719 | 0.25 |
+      | guided        | 8 |  39478  |  1.18884 | 0.14 |
+      |-----------------------------------------------|
+      | guided(300)   | 1 |  46988  |  0.99885 | 0.99 |
+      | guided(300)   | 2 |  45706  |  1.02686 | 0.51 |
+      | guided(300)   | 4 |  45417  |  1.03340 | 0.25 |
+      | guided(300)   | 8 |  39443  |  1.18991 | 0.14 |
+      -------------------------------------------------
+
+   Explanation:
+
+   These results behave similarly as those above, except
+   in this case only the default "dynamic" schedule performed
+   exceptionally well. Although it isn't possible to know exactly
+   why the guided schedule did so poorly by only moving the y-center
+   point over by negative eight, I have a hypothesis. As you move
+   the axis left word you are moving away the main circular center
+   of the Mandelbrot Set and towards the outer glob's. I suppose
+   it is possible that more of these points are "harder" to compute
+   than at the previous y-center. This augmented the performance of the
+   default guided schedule by putting an abnormally large chunk of "hard"
+   points on a single thread, consistently. Due to the non chunk based schedule 
+   the default "dynamic" schedule was not effected. This is of course only
+   speculation and a more in depth analysis may be required.
+
+
+
