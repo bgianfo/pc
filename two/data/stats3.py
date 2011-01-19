@@ -9,13 +9,13 @@ def esdf( seq, par, k ):
   return (k*par-seq)/(k*seq-seq)
 
 seqen = 486774.0
+od = 408043.0
+td = 210629.0
+fd = 131618.0
+ed = 66904.0
 
-o = 408043.0 
-t = .0
-f = .0 
-e = .0 
-
-print "#1 %s %s %s "%(speedup(seqen,o),eff(speedup(seqen,o),1),esdf(seqen,o,1)) 
-print "#2 %s %s %s "%(speedup(seqen,t),eff(speedup(seqen,t),2),esdf(seqen,t,2)) 
-print "#4 %s %s %s "%(speedup(seqen,f),eff(speedup(seqen,f),4),esdf(seqen,f,4)) 
-print "#8 %s %s %s "%(speedup(seqen,e),eff(speedup(seqen,e),8),esdf(seqen,e,8)) 
+print "test"
+print "#1 %s %s " % ( speedup(seqen,od), eff(speedup(seqen,od),1) ) 
+print "#2 %s %s %s" % ( speedup(seqen,td), eff(speedup(seqen,td),2), esdf(seqen,td,2) ) 
+print "#4 %s %s %s" % ( speedup(seqen,fd), eff(speedup(seqen,fd),4), esdf(seqen,fd,4) ) 
+print "#8 %s %s %s" % ( speedup(seqen,ed), eff(speedup(seqen,ed),8), esdf(seqen,ed,8) ) 
