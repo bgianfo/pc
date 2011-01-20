@@ -20,7 +20,7 @@ import edu.rit.pj.ParallelTeam;
 import edu.rit.pj.BarrierAction;
 
 /**
- * Class EncryptFileSmpNoOverlap encryptes inputfile using the AES cipher. 
+ * Class EncryptFileSmpNoOverlap encrypts a input file using the AES cipher. 
  * <P>
  * Usage: java EncryptFileSmpNoOverlap  <I>key</I> <I>inFileName</I> <I>outFileName</I> <I>chunkSize</I>
  * <BR><I>key</I> = Encryption key (256-bit hexadecimal number)

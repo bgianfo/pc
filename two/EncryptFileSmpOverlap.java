@@ -21,7 +21,7 @@ import edu.rit.pj.ParallelTeam;
 import edu.rit.pj.BarrierAction;
 
 /**
- * Class EncryptFileSmpOverlap encryptes inputfile using the AES cipher. 
+ * Class EncryptFileSmpOverlap encrypts a  input file using the AES cipher. 
  * <P>
  * Usage: java EncryptFileSmpOverlap  <I>key</I> <I>inFileName</I> <I>outFileName</I> <I>chunkSize</I>
  * <BR><I>key</I> = Encryption key (256-bit hexadecimal number)
@@ -108,7 +108,7 @@ public class EncryptFileSmpOverlap {
         plainText1Chunk = plainText2Chunk;
         plainText2Chunk = tmp;
 
-        // Move data read to the write sizee
+        // Move data read to the write size
         dataWriteSize = dataReadSize;
     }
 
