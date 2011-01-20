@@ -2,14 +2,52 @@
  Author: Brian Gianforcaro (bjg1955@cs.rit.edu)
  Homework: #2-3
 
+      Fixed Schedule:
       ----------------------------------------------- 
       | K    | T (msec) |  Speedup |  Eff  |  ESDF  |
       |---------------------------------------------|
-      | seq  |  486774  | xxxxxxxx | xxxxx | xxxxxx |
-      |  1   |  408043  |  1.19294 | 1.192 | xxxxxx |
-      |  2   |  210629  |  2.31104 | 1.155 | -0.134 |
-      |  4   |  131618  |  3.69838 | 0.924 |  0.027 |
-      |  8   |   66904  |  7.27570 | 0.909 |  0.014 |
+      | seq  |  486695  | xxxxxxxx | xxxxx | xxxxxx |
+      |  1   |  407823  | 1.193397 | 1.193 | xxxxxx |
+      |  2   |  285184  | 1.706599 | 0.853 | 0.1719 |
+      |  4   |  132995  | 3.659498 | 0.914 | 0.0310 |
+      |  8   |   65965  | 7.378079 | 0.922 | 0.0120 |
       ----------------------------------------------- 
 
-  Explanation for schedule: 
+      Dynamic Schedule:
+      ----------------------------------------------- 
+      | K    | T (msec) |  Speedup |  Eff  |  ESDF  |
+      |---------------------------------------------|
+      | seq  |  486695  | xxxxxxxx | xxxxx | xxxxxx |
+      |  1   |  306008  | 1.590464 | 1.590 | xxxxxx |
+      |  2   |  162198  | 3.000622 | 1.500 |-0.3334 |
+      |  4   |   85172  | 5.714260 | 1.428 |-0.0999 |
+      |  8   |   56086  | 8.677655 | 1.084 |-0.0111 |
+      ----------------------------------------------- 
+
+      Guided Schedule:
+      ----------------------------------------------- 
+      | K    | T (msec) |  Speedup |  Eff  |  ESDF  |
+      |---------------------------------------------|
+      | seq  |  486695  | xxxxxxxx | xxxxx | xxxxxx |
+      |  1   |  369887  | 1.315793 | 1.315 | xxxxxx |
+      |  2   |  219444  | 2.217855 | 1.108 |-0.0982 |
+      |  4   |  101388  | 4.800321 | 1.200 |-0.0555 |
+      |  8   |   49493  | 9.833612 | 1.229 |-0.0266 |
+      ----------------------------------------------- 
+
+
+  Explanation for chosen schedule: 
+
+    As the data tables above show when running
+    MSAreaSmp with a guided or dynamic schedule
+    we obtain the best performance.
+
+    Between these two schedules I chose to select
+    the Guided schedule as my final selection. While
+    the dynamic schedule gave a slightly higher efficiency
+    while running on a smaller K, the guided schedule
+    gives a more consistent efficiency as the program
+    is scaled out to larger K's.
+
+    I feel in the long run the guided schedule is 
+    more scalable than the other schedules.

@@ -38,6 +38,23 @@
 
    Explanation:
 
+   Due to the nature of the Mandelbrot Set calculation
+   the schedule used when computing set member ship
+   effects performance drastically. Since different
+   sections of the Mandelbrot set are more computationally
+   extensive, therefor single threads can get bogged down
+   with "harder" chunks of data and bog down runtime.
+
+   As you can see in the above data table the default
+   "dynamic" & "guided" schedule with their small chunk
+   sizes perform drastically better than all the other 
+   tested schedules. I believe this is because these 
+   schedules allow "harder" chunks to get distributed
+   evenly across multiple threads and they dynamically
+   adjust for threads finishing faster or slower than
+   normal.
+
+
  1b) Parameters: 3200 9600 -0.75 -4 1200 2500 0.4 ms.pjg
 
       -------------------------------------------------
@@ -72,3 +89,20 @@
       -------------------------------------------------
 
    Explanation:
+
+   These results behave similarly as those above, except
+   in this case only the default "dynamic" schedule performed
+   exceptionally well. Although it isn't possible to know exactly
+   why the guided schedule did so poorly by only moving the y-center
+   point over by negative eight, I have a hypothesis. As you move
+   the axis left word you are moving away the main circular center
+   of the Mandelbrot Set and towards the outer glob's. I suppose
+   it is possible that more of these points are "harder" to compute
+   than at the previous y-center. This augmented the performance of the
+   default guided schedule by putting an abnormally large chunk of "hard"
+   points on a single thread, consistently. Due to the non chunk based schedule 
+   the default "dynamic" schedule was not effected. This is of course only
+   speculation and a more in depth analysis may be required.
+
+
+
