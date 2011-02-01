@@ -97,9 +97,10 @@ public class ElementaryCAClu {
 
     Range[] ranges = new Range( 0, gridSize-1 ).subranges( worldSize );
 
-    ByteBuf[] dest = ByteBuf.sliceBuffers( grid, ranges ); 
+		ByteBuf junk = ByteBuf.buffer();
 
     for ( int i = 0; i < steps; i++ ) {
+			System.out.println("Starting Step: "+i);
 
       // Send out tasks
 
@@ -108,7 +109,8 @@ public class ElementaryCAClu {
       world.broadcast( 0, GRID_START_MSG, buffer );
 
       // Retreive resutls
-      world.gather( 0, CHUNK_DONE_MSG, null, dest );
+      ByteBuf[] dest = ByteBuf.sliceBuffers( grid, ranges ); 
+      world.gather( 0, CHUNK_DONE_MSG, junk, dest );
 
 
       // Copy all results to buffer
@@ -120,7 +122,14 @@ public class ElementaryCAClu {
         }
       }
     }
-    world.broadcast( 0, GRID_START_MSG, null );
+
+		System.out.println("Master Done");
+		/*
+		byte tmp = grid[0];
+		grid[0] = -1;
+    world.broadcast( 0, GRID_START_MSG, ByteBuf.buffer( grid ) );
+		grid[0] = tmp;
+		*/
   }
 
 
@@ -133,32 +142,34 @@ public class ElementaryCAClu {
     int lb = ranges[rank].lb();
     int ub = ranges[rank].ub();
 
+		byte[] grid = new byte[gridSize];
     byte[] chunk = new byte[ranges[rank].length()];
 
-    while ( true ) {
-      ByteBuf grid = ByteBuf.buffer();
-      world.broadcast( 0, GRID_START_MSG, grid );
-      if ( grid == null ) {
-        break;
-      }
+		int workerSteps = steps;
+    while ( workerSteps >= 0 ) {
+      ByteBuf gridBuf = ByteBuf.buffer( grid );
+      world.broadcast( 0, GRID_START_MSG, gridBuf );
 
       int iChunk = 0;
-
       for ( int iCell = lb; iCell <= ub; iCell++ ) {
         // Compute previous and next cell indices
         int iPrev = (iCell+gridSize-1) % gridSize;
         int iNext = (iCell+1) % gridSize;
 
         // Compute which bit of the rule to use
-        int bit = (grid.get(iPrev)*4) + (grid.get(iCell)*2) + (grid.get(iNext)*1);
+        int bit = (gridBuf.get(iPrev)*4) + (gridBuf.get(iCell)*2) + (gridBuf.get(iNext)*1);
 
-        chunk[iCell] = rule[bit];
+        chunk[iChunk] = rule[bit];
         iChunk++;
       }
 
       ByteBuf chunkBuf = ByteBuf.buffer( chunk );
+			ByteBuf emptyBuf = ByteBuf.emptyBuffer();
       world.gather( 0, CHUNK_DONE_MSG, chunkBuf, null );
+			workerSteps--;
     }
+
+		System.out.println("Worker #"+rank+" Done");
   }
 
   /**
