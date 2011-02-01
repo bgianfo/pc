@@ -1,23 +1,18 @@
 
 import edu.rit.pj.Comm;
-import edu.rit.pj.ParallelRegion;
-import edu.rit.pj.ParallelTeam;
-import edu.rit.pj.IntegerForLoop;
-import edu.rit.pj.BarrierAction;
-
 
 /**
- * Class ElementaryCASmp is the parallel version of the Elementary Cellular Automaton.
+ * Class ElementaryCAClu is the sequential version of the Elementary Cellular Automaton 
  * <P>
- * Usage: java ElementaryCASeq <I>rule</I> <I>gridSize</I> <I>numSteps</I>
+ * Usage: java ElementaryCAClu <I>rule</I> <I>gridSize</I> <I>numSteps</I>
  * <BR><I>rule</I> - The rule to execute ( an integer )
  * <BR><I>gridSize</I> - The size of the grid ( and integer )
  * <BR><I>numSteps</I> - The number of steps to execute ( an integer )
  *
  * @author  Brian Gianforcaro
- * @version 12-Dec-2010
+ * @version 25-Jan-2011
  */
-public class ElementaryCASmp {
+public class ElementaryCAClu {
 
   static int size;
   static int steps;
@@ -25,14 +20,17 @@ public class ElementaryCASmp {
   static byte[] grid;
   static byte[] nextGrid;
 
-  private ElementaryCASmp() {}
+  static Comm world;
+  static int rank;
+
+  private ElementaryCAClu() {}
 
   /**
    * Usage statement
    */
   private static void usage() {
     System.out.println("");
-    System.out.println( "Usage: ElementaryCASeq <rule> <gridSize> <numSteps>\n" );
+    System.out.println( "Usage: ElementaryCAClu <rule> <gridSize> <numSteps>\n" );
     System.out.println( "   <rule> - The rule to execute ( an integer ) " );
     System.out.println( "   <gridSize> - The size of the grid ( and integer )" );
     System.out.println( "   <numSteps> - The number of steps to execute ( an integer )\n" );
@@ -99,7 +97,7 @@ public class ElementaryCASmp {
 
     long start = System.currentTimeMillis();
 
-    // Parse the command line arguments
+    // Check commandline arguments
     if ( args.length < 3 ) {
       usage();
       return;
@@ -107,6 +105,9 @@ public class ElementaryCASmp {
 
     // Initialize parallel infrastructure
     Comm.init( args );
+    world = Comm.world();
+    //size = world.size();
+    rank = world.rank();
 
     // Parse the command line arguments
     parseArgs( args );
@@ -114,40 +115,22 @@ public class ElementaryCASmp {
     // Seed the grid with a single set bit.
     grid[size/2] = 1;
 
-    new ParallelTeam().execute( new ParallelRegion() {
+    for ( int step = 0; step < steps; step++ ) {
 
-      public void run() throws Exception {
+      for ( int iCell = 0; iCell < size; iCell++ ) {
 
-        for ( int step = 0; step < steps; step++ ) {
+        // Compute previous and next cell indices
+        int iPrev = (iCell+size-1) % size;
+        int iNext = (iCell+1) % size;
 
-          execute( 0, size-1, new IntegerForLoop() {
+        // Compute which bit of the rule to use
+        int bit = (grid[iPrev]*4)+(grid[iCell]*2)+(grid[iNext]*1);
 
-            public void run( int first, int last ) {
-
-              for ( int cell = first; cell <= last; cell++ ) {
-
-                // Compute previous and next cell indices
-                int prev = (cell+size-1) % size;
-                int next = (cell+1) % size;
-
-                // Compute which bit of the rule to use
-                int bit = (grid[prev]*4) + (grid[cell]*2) + (grid[next]*1);
-
-                nextGrid[cell] = rule[bit];
-              }
-            }
-          },
-          // Swap current with the next grid
-          new BarrierAction() {
-
-            public void run() throws Exception {
-              swap();
-            }
-
-          });
-        }
+        nextGrid[iCell] = rule[bit];
       }
-    });
+      // Swap the current grid with the nextGrid
+      swap();
+    }
 
     // Count bits with value 1 in the final grid
     System.out.println( getCount() );

@@ -1,0 +1,60 @@
+Author: Brian Gianforcaro ( bjg1955@rit.edu )
+Assignment: Homework #3-1
+
+
+  Here is the cluster parallel version of Floyd's Algorithm for computing all
+  shortest paths in an n-vertex graph whos distance matrix is d, and n-by-n
+  matrix. Each element in d is a Java double-precision floating-point number.
+  The version uses the scatter-gather pattern rather than the parallel
+  input/output files pattern. The sequential version of Floyd's Algorithm is
+  the same, without the communication operations. 
+
+  1 Scatter row slices of D from process 0 to each process
+  2 For i in 0 .. N-1
+  3     Broadcast row i of D to all processes
+  4     For r in this process's subrange of 0 .. N-1
+  5         For c in 0 .. N-1 
+  6             D[r,c] = min ( D[r,c], D[r,i] + D[i,c] )
+  7 Gather row slices of D from each process into process 0
+
+  d is divided into equal-sized row slices. Measurements show that 
+  executing the statement on line 6 takes 0.01 microseconds. Also, measurements
+  show that sending a message from one process to another takes (400 + 0.8B) ms,
+  where B is the number of bits of data in the message.
+
+
+    Exercise 21 (p. 574):
+    ---------------------
+    Give an expression for the running time T1 in microseconds of the
+    sequential version of Floyd's Algorithm as a function of n, the number
+    of node. Ignore the loop overhead time.
+
+    Exercise 22 (p. 574):
+    ---------------------
+    Give an expression for the time T2 in microseconds needed to send all the
+    messages for the scatter operation on line 1 as a function of n, the number
+    of nodes, and K, he number of parallel processes. 
+
+    Exercise 23 (p. 574):
+    ---------------------
+    Give an expression for the time T3 in microseconds needed to send all the 
+    messages for the broadcast operation on line 3 as a function of n, the
+    number of nodes, and K, the number of parallel processes. 
+
+    Exercise 24 (p. 574):
+    ---------------------
+    Give an expression for the running time T4 in microseconds of the cluster
+    parallel version of Floyd's Algorithm as a function of n, the number of 
+    nodes, and K, the number of parallel processes. Ignore the loop overhead
+    time.
+
+    Exercise 25 (p. 574):
+    ---------------------
+    How many parallel processes should be used to obtain the smallest running
+    time for a 1,000-vertex graph?
+    (Note that the number of parallel processes must be an integer)
+
+    Exercise 26 (p. 574):
+    ---------------------
+    What is the largest speedup that can be obtained for a 1000-vertex graph.
+
