@@ -89,28 +89,46 @@ public class ElementaryCAClu {
   }
 
   /**
-   * The worker section to be run on cluster nodes. 
+   * The master section to be run on cluster nodes. 
    */
   private static void masterSection( byte[] grid ) throws Exception {
 
     grid[gridSize/2] = 1;
+    ByteBuf buffer = ByteBuf.buffer( grid );
 
     Range[] ranges = new Range( 0, gridSize-1 ).subranges( worldSize );
+    int lb = ranges[rank].lb();
+    int ub = ranges[rank].ub();
 
-		ByteBuf junk = ByteBuf.buffer();
+    byte[] chunk = new byte[ranges[rank].length()];
+    ByteBuf chunkBuf = ByteBuf.buffer( chunk );
+
+    byte[] tmpDest = new byte[gridSize];
+    ByteBuf[] dest = ByteBuf.sliceBuffers( tmpDest, ranges ); 
 
     for ( int i = 0; i < steps; i++ ) {
-			System.out.println("Starting Step: "+i);
+      System.out.println("Starting Step: "+i);
 
       // Send out tasks
 
       // Make sure the reference is updated
-      ByteBuf buffer = ByteBuf.buffer( grid );
-      world.broadcast( 0, GRID_START_MSG, buffer );
+      world.broadcast( 0, buffer );
+
+      int iChunk = 0;
+      for ( int iCell = lb; iCell <= ub; iCell++ ) {
+        // Compute previous and next cell indices
+        int iPrev = (iCell+gridSize-1) % gridSize;
+        int iNext = (iCell+1) % gridSize;
+
+        // Compute which bit of the rule to use
+        int bit = (grid[iPrev]*4) + (grid[iCell]*2) + (grid[iNext]*1);
+
+        chunk[iChunk] = rule[bit];
+        iChunk++;
+      }
 
       // Retreive resutls
-      ByteBuf[] dest = ByteBuf.sliceBuffers( grid, ranges ); 
-      world.gather( 0, CHUNK_DONE_MSG, junk, dest );
+      world.gather( 0, chunkBuf, dest );
 
 
       // Copy all results to buffer
@@ -123,13 +141,7 @@ public class ElementaryCAClu {
       }
     }
 
-		System.out.println("Master Done");
-		/*
-		byte tmp = grid[0];
-		grid[0] = -1;
-    world.broadcast( 0, GRID_START_MSG, ByteBuf.buffer( grid ) );
-		grid[0] = tmp;
-		*/
+    System.out.println("Master Done");
   }
 
 
@@ -142,13 +154,16 @@ public class ElementaryCAClu {
     int lb = ranges[rank].lb();
     int ub = ranges[rank].ub();
 
-		byte[] grid = new byte[gridSize];
-    byte[] chunk = new byte[ranges[rank].length()];
+    byte[] grid = new byte[gridSize];
+    ByteBuf gridBuf = ByteBuf.buffer( grid );
 
-		int workerSteps = steps;
-    while ( workerSteps >= 0 ) {
-      ByteBuf gridBuf = ByteBuf.buffer( grid );
-      world.broadcast( 0, GRID_START_MSG, gridBuf );
+    byte[] chunk = new byte[ranges[rank].length()];
+    ByteBuf chunkBuf = ByteBuf.buffer( chunk );
+
+    for ( int i = 0; i < steps; i++ ) {
+
+      world.broadcast( 0, gridBuf );
+      System.out.println("Worker #"+rank+" step#"+i);
 
       int iChunk = 0;
       for ( int iCell = lb; iCell <= ub; iCell++ ) {
@@ -162,14 +177,9 @@ public class ElementaryCAClu {
         chunk[iChunk] = rule[bit];
         iChunk++;
       }
-
-      ByteBuf chunkBuf = ByteBuf.buffer( chunk );
-			ByteBuf emptyBuf = ByteBuf.emptyBuffer();
-      world.gather( 0, CHUNK_DONE_MSG, chunkBuf, null );
-			workerSteps--;
+      world.gather( 0, chunkBuf, null );
     }
-
-		System.out.println("Worker #"+rank+" Done");
+    System.out.println("Worker #"+rank+" Done");
   }
 
   /**
@@ -200,11 +210,14 @@ public class ElementaryCAClu {
       final byte[] grid = new byte[gridSize];
 
 		  // In master process, run master section & worker section.
+      /*
     	new ParallelTeam(2).execute( new ParallelRegion() {
 				public void run() throws Exception {
 					execute( new ParallelSection() {
 						public void run() throws Exception {
+            */
 							masterSection( grid );
+              /*
             }
           }, new ParallelSection() {
 						public void run() throws Exception {
@@ -213,6 +226,7 @@ public class ElementaryCAClu {
           });
         }
       });
+      */
 
       // Count bits with value 1 in the final grid
       System.out.println( getCount( grid ) );

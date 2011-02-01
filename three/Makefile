@@ -4,10 +4,11 @@
 #  Homework: #2
 #
 ############################################################
-#CC = javac -Xlint:all
-CC = /usr/jdk/jdk1.5.0_17/bin/javac -Xlint:all
-JAVA = /usr/jdk/jdk1.5.0_17/bin/java
 PJ = ../pj.jar:.
+CC = javac -Xlint:all
+JAVA = java -cp $(PJ)
+#CC = /usr/jdk/jdk1.5.0_17/bin/javac -Xlint:all
+#JAVA = /usr/jdk/jdk1.5.0_17/bin/java
 
 default: class
 
@@ -17,8 +18,7 @@ class: clean *.java
 zip: bundle
 
 test: class
-	#$(JAVA) -Dpj.np=4 ElementaryCAClu 30 200000 2000
-	$(JAVA) -Dpj.np=4 ElementaryCAClu 30 200000 200
+	$(JAVA) -Dpj.np=4 ElementaryCAClu 30 200000 2000
 
 
 bundle: hw3-1.txt ElementaryCASeq.java ElementaryCAClu.java hw3-2.txt
