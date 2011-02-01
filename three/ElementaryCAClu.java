@@ -107,13 +107,10 @@ public class ElementaryCAClu {
     ByteBuf[] dest = ByteBuf.sliceBuffers( tmpDest, ranges ); 
 
     for ( int i = 0; i < steps; i++ ) {
-      System.out.println("Starting Step: "+i);
-
       // Send out tasks
-
-      // Make sure the reference is updated
       world.broadcast( 0, buffer );
 
+      // Do work while we are waiting.
       int iChunk = 0;
       for ( int iCell = lb; iCell <= ub; iCell++ ) {
         // Compute previous and next cell indices
@@ -130,7 +127,6 @@ public class ElementaryCAClu {
       // Retreive resutls
       world.gather( 0, chunkBuf, dest );
 
-
       // Copy all results to buffer
       int count = 0;
       for ( ByteBuf curBuf : dest ) { 
@@ -140,8 +136,6 @@ public class ElementaryCAClu {
         }
       }
     }
-
-    System.out.println("Master Done");
   }
 
 
@@ -162,8 +156,8 @@ public class ElementaryCAClu {
 
     for ( int i = 0; i < steps; i++ ) {
 
+      // Receive current grid from master
       world.broadcast( 0, gridBuf );
-      System.out.println("Worker #"+rank+" step#"+i);
 
       int iChunk = 0;
       for ( int iCell = lb; iCell <= ub; iCell++ ) {
@@ -177,9 +171,10 @@ public class ElementaryCAClu {
         chunk[iChunk] = rule[bit];
         iChunk++;
       }
+
+      // Return workers computed chunk back to the master
       world.gather( 0, chunkBuf, null );
     }
-    System.out.println("Worker #"+rank+" Done");
   }
 
   /**
@@ -204,30 +199,10 @@ public class ElementaryCAClu {
     // Parse the command line arguments
     parseArgs( args );
 
-
     if ( 0 == rank ) {
-
       final byte[] grid = new byte[gridSize];
-
 		  // In master process, run master section & worker section.
-      /*
-    	new ParallelTeam(2).execute( new ParallelRegion() {
-				public void run() throws Exception {
-					execute( new ParallelSection() {
-						public void run() throws Exception {
-            */
-							masterSection( grid );
-              /*
-            }
-          }, new ParallelSection() {
-						public void run() throws Exception {
-							workerSection();
-            }
-          });
-        }
-      });
-      */
-
+      masterSection( grid );
       // Count bits with value 1 in the final grid
       System.out.println( getCount( grid ) );
       System.out.println( "Running time = " +
