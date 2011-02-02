@@ -1,8 +1,16 @@
 
+
+import edu.rit.util.Range;
+import edu.rit.mp.ByteBuf;
+import edu.rit.mp.buf.ByteArrayBuf;
+
 import edu.rit.pj.Comm;
+import edu.rit.pj.ParallelTeam;
+import edu.rit.pj.ParallelRegion;
+import edu.rit.pj.ParallelSection;
 
 /**
- * Class ElementaryCAClu is the sequential version of the Elementary Cellular Automaton 
+ * Class ElementaryCAClu is the cluster version of the Elementary Cellular Automaton 
  * <P>
  * Usage: java ElementaryCAClu <I>rule</I> <I>gridSize</I> <I>numSteps</I>
  * <BR><I>rule</I> - The rule to execute ( an integer )
@@ -14,14 +22,16 @@ import edu.rit.pj.Comm;
  */
 public class ElementaryCAClu {
 
-  static int size;
+  static int gridSize;
   static int steps;
   static byte[] rule = new byte[8];
-  static byte[] grid;
-  static byte[] nextGrid;
 
   static Comm world;
+  static int worldSize;
   static int rank;
+
+  static int GRID_START_MSG = 10;
+  static int CHUNK_DONE_MSG = 20;
 
   private ElementaryCAClu() {}
 
@@ -61,33 +71,94 @@ public class ElementaryCAClu {
     int ruleValue;
 
     ruleValue = Integer.parseInt( args[0] );
-    size      = Integer.parseInt( args[1] );
+    gridSize  = Integer.parseInt( args[1] );
     steps     = Integer.parseInt( args[2] );
 
     setupRule( ruleValue );
-
-    grid      = new byte[size];
-    nextGrid  = new byte[size];
   }
 
   /**
    * Get the number of cell's with value 1
    */
-  private static int getCount() {
+  private static int getCount( byte[] grid ) {
     int counter = 0;
-    for ( int cell = 0; cell < size; ++cell ) {
+    for ( int cell = 0; cell < gridSize; ++cell ) {
       counter += grid[cell];
     }
     return counter;
   }
 
   /**
-   * Swap the current grid with the nextGrid
+   * The worker section to be run on cluster nodes. 
    */
-  private static void swap() {
-    byte[] old = grid;
-    grid = nextGrid;
-    nextGrid = old;
+  private static void masterSection( byte[] grid ) throws Exception {
+
+    grid[gridSize/2] = 1;
+
+    Range[] ranges = new Range( 0, gridSize-1 ).subranges( worldSize );
+
+    ByteBuf[] dest = ByteBuf.sliceBuffers( grid, ranges ); 
+
+    for ( int i = 0; i < steps; i++ ) {
+
+      // Send out tasks
+
+      // Make sure the reference is updated
+      ByteBuf buffer = ByteBuf.buffer( grid );
+      world.broadcast( 0, GRID_START_MSG, buffer );
+
+      // Retreive resutls
+      world.gather( 0, CHUNK_DONE_MSG, null, dest );
+
+
+      // Copy all results to buffer
+      int count = 0;
+      for ( ByteBuf curBuf : dest ) { 
+        for ( int j = 0; j < curBuf.length(); j++ ) {
+          grid[count] = curBuf.get(j);
+          count++;
+        }
+      }
+    }
+    world.broadcast( 0, GRID_START_MSG, null );
+  }
+
+
+  /**
+   * The worker section to be run on cluster nodes. 
+   */
+  private static void workerSection() throws Exception {
+
+    Range[] ranges = new Range( 0, gridSize-1).subranges( worldSize );
+    int lb = ranges[rank].lb();
+    int ub = ranges[rank].ub();
+
+    byte[] chunk = new byte[ranges[rank].length()];
+
+    while ( true ) {
+      ByteBuf grid = ByteBuf.buffer();
+      world.broadcast( 0, GRID_START_MSG, grid );
+      if ( grid == null ) {
+        break;
+      }
+
+      int iChunk = 0;
+
+      for ( int iCell = lb; iCell <= ub; iCell++ ) {
+        // Compute previous and next cell indices
+        int iPrev = (iCell+gridSize-1) % gridSize;
+        int iNext = (iCell+1) % gridSize;
+
+        // Compute which bit of the rule to use
+        int bit = (grid.get(iPrev)*4) + (grid.get(iCell)*2) + (grid.get(iNext)*1);
+
+        chunk[iCell] = rule[bit];
+        iChunk++;
+      }
+
+      ByteBuf chunkBuf = ByteBuf.buffer( chunk );
+      world.gather( 0, CHUNK_DONE_MSG, chunkBuf, null );
+    }
   }
 
   /**
@@ -106,35 +177,39 @@ public class ElementaryCAClu {
     // Initialize parallel infrastructure
     Comm.init( args );
     world = Comm.world();
-    //size = world.size();
+    worldSize = world.size();
     rank = world.rank();
 
     // Parse the command line arguments
     parseArgs( args );
 
-    // Seed the grid with a single set bit.
-    grid[size/2] = 1;
 
-    for ( int step = 0; step < steps; step++ ) {
+    if ( 0 == rank ) {
 
-      for ( int iCell = 0; iCell < size; iCell++ ) {
+      final byte[] grid = new byte[gridSize];
 
-        // Compute previous and next cell indices
-        int iPrev = (iCell+size-1) % size;
-        int iNext = (iCell+1) % size;
+		  // In master process, run master section & worker section.
+    	new ParallelTeam(2).execute( new ParallelRegion() {
+				public void run() throws Exception {
+					execute( new ParallelSection() {
+						public void run() throws Exception {
+							masterSection( grid );
+            }
+          }, new ParallelSection() {
+						public void run() throws Exception {
+							workerSection();
+            }
+          });
+        }
+      });
 
-        // Compute which bit of the rule to use
-        int bit = (grid[iPrev]*4)+(grid[iCell]*2)+(grid[iNext]*1);
-
-        nextGrid[iCell] = rule[bit];
-      }
-      // Swap the current grid with the nextGrid
-      swap();
+      // Count bits with value 1 in the final grid
+      System.out.println( getCount( grid ) );
+      System.out.println( "Running time = " +
+                          (System.currentTimeMillis()-start) + " msec" );
+    } else {
+		  // In worker process, run only worker section.
+      workerSection();
     }
-
-    // Count bits with value 1 in the final grid
-    System.out.println( getCount() );
-    System.out.println( "Running time = " +
-                        (System.currentTimeMillis()-start) + " msec" );
   }
 }
