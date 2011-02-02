@@ -25,6 +25,9 @@ public class ElementaryCAClu {
   static int gridSize;
   static int steps;
   static byte[] rule = new byte[8];
+  static byte[] grid;
+  static byte[] nextGrid;
+
 
   static Comm world;
   static int worldSize;
@@ -89,16 +92,26 @@ public class ElementaryCAClu {
   }
 
   /**
+   * Swap the current grid with the nextGrid
+   */
+  private static void swap() {
+    byte[] old = grid;
+    grid = nextGrid;
+    nextGrid = old;
+  }
+
+
+  /**
    * The master section to be run on cluster nodes. 
    */
-  private static void masterSection( byte[] grid ) throws Exception {
+  private static void masterSection( ) throws Exception {
 
     grid[gridSize/2] = 1;
-    ByteBuf buffer = ByteBuf.buffer( grid );
 
     Range[] ranges = new Range( 0, gridSize-1 ).subranges( worldSize );
     int lb = ranges[rank].lb();
     int ub = ranges[rank].ub();
+
 
     byte[] chunk = new byte[ranges[rank].length()];
     ByteBuf chunkBuf = ByteBuf.buffer( chunk );
@@ -107,18 +120,21 @@ public class ElementaryCAClu {
     ByteBuf[] dest = ByteBuf.sliceBuffers( tmpDest, ranges ); 
 
     for ( int i = 0; i < steps; i++ ) {
+
+
+      ByteBuf[] buffers = ByteBuf.sliceBuffers( nextGrid, ranges );
       // Send out tasks
-      world.broadcast( 0, buffer );
+      world.scatter( 0, buffers, chunkBuf );
 
       // Do work while we are waiting.
-      int iChunk = 0;
-      for ( int iCell = lb; iCell <= ub; iCell++ ) {
+      int iChunk = 1;
+      for ( int iCell = lb+1; iCell <= ub-1; iCell++ ) {
         // Compute previous and next cell indices
         int iPrev = (iCell+gridSize-1) % gridSize;
         int iNext = (iCell+1) % gridSize;
 
         // Compute which bit of the rule to use
-        int bit = (grid[iPrev]*4) + (grid[iCell]*2) + (grid[iNext]*1);
+        int bit = (nextGrid[iPrev]*4) + (nextGrid[iCell]*2) + (nextGrid[iNext]*1);
 
         chunk[iChunk] = rule[bit];
         iChunk++;
@@ -135,6 +151,25 @@ public class ElementaryCAClu {
           count++;
         }
       }
+
+      // Patch the missing sections
+      for ( Range range : ranges ) {
+
+        // The patched cell lower bound
+        int patchLb = range.lb();
+        int iPrev = (patchLb+gridSize-1) % gridSize;
+        int iNext = (patchLb+1) % gridSize;
+        int bit = (nextGrid[iPrev]*4) + (nextGrid[patchLb]*2) + (nextGrid[iNext]*1);
+        grid[patchLb] = rule[bit];
+
+        // The patched cell upper bound
+        int patchUb = range.ub();
+        iPrev = (patchUb+gridSize-1) % gridSize;
+        iNext = (patchUb+1) % gridSize;
+        bit = (nextGrid[iPrev]*4) + (nextGrid[patchUb]*2) + (nextGrid[iNext]*1);
+        grid[patchUb] = rule[bit];
+      }
+      swap();
     }
   }
 
@@ -148,19 +183,22 @@ public class ElementaryCAClu {
     int lb = ranges[rank].lb();
     int ub = ranges[rank].ub();
 
-    byte[] grid = new byte[gridSize];
-    ByteBuf gridBuf = ByteBuf.buffer( grid );
+    // Create worker in grid
+    byte[] wgrid = new byte[ranges[rank].length()];
+    ByteBuf gridBuf = ByteBuf.buffer( wgrid );
 
+    // Create worker out grid
     byte[] chunk = new byte[ranges[rank].length()];
     ByteBuf chunkBuf = ByteBuf.buffer( chunk );
 
     for ( int i = 0; i < steps; i++ ) {
 
       // Receive current grid from master
-      world.broadcast( 0, gridBuf );
+      world.scatter( 0, null, gridBuf );
 
-      int iChunk = 0;
-      for ( int iCell = lb; iCell <= ub; iCell++ ) {
+      // Only do the cells we have data for
+      int iChunk = 1;
+      for ( int iCell = lb+1; iCell <= ub-1; iCell++ ) {
         // Compute previous and next cell indices
         int iPrev = (iCell+gridSize-1) % gridSize;
         int iNext = (iCell+1) % gridSize;
@@ -200,9 +238,10 @@ public class ElementaryCAClu {
     parseArgs( args );
 
     if ( 0 == rank ) {
-      final byte[] grid = new byte[gridSize];
+      grid = new byte[gridSize];
+      nextGrid = new byte[gridSize];
 		  // In master process, run master section & worker section.
-      masterSection( grid );
+      masterSection();
       // Count bits with value 1 in the final grid
       System.out.println( getCount( grid ) );
       System.out.println( "Running time = " +
