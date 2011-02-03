@@ -1,32 +1,50 @@
 Author: Brian Gianforcaro ( bjg1955@rit.edu )
 Assignment: Homework #3-2
 
-    
-    ----------------------------------------------------------------------
-    | GridSize | numSteps  |  K  |  T (msec)  |  Speedup  |  Eff  | EDSF |
-    |----------|-----------|-----|------------|-----------|-------|------|
-    | 20000000 | 200       | seq |            |  xxxxxxx  | xxxxx | xxxx |
-    | 20000000 | 200       |  1  |            |           |       | xxxx |
-    | 20000000 | 200       |  2  |            |           |       |      |   
-    | 20000000 | 200       |  4  |            |           |       |      |
-    | 20000000 | 200       |  8  |            |           |       |      |
-    | 20000000 | 200       |  16 |            |           |       |      | 
-    |----------|-----------|-----|------------|-----------|-------|------|
-    |  2000000 | 2000      | seq |            |  xxxxxxx  | xxxx  | xxxx |
-    |  2000000 | 2000      |  1  |            |           |       | xxxx |
-    |  2000000 | 2000      |  2  |            |           |       |      |
-    |  2000000 | 2000      |  4  |            |           |       |      |
-    |  2000000 | 2000      |  8  |            |           |       |      |
-    |  2000000 | 2000      | 16  |            |           |       |      |
-    |----------|-----------|-----|------------|-----------|-------|------|
-    |    20000 | 200000    | seq |            |  xxxxxxx  | xxxx  | xxxx |
-    |    20000 | 200000    |  1  |            |           |       | xxxx |
-    |    20000 | 200000    |  2  |            |           |       |      |
-    |    20000 | 200000    |  4  |            |           |       |      |
-    |    20000 | 200000    |  8  |            |           |       |      |
-    |    20000 | 200000    | 16  |            |           |       |      |
-    ----------------------------------------------------------------------
+    ---------------------------------------------------------------------
+    | GridSize | numSteps |  K  |  T (msec)  |  Speedup  |  Eff  | EDSF |
+    |----------|----------|-----|------------|-----------|-------|------|
+    | 20000000 | 200      | seq |  1179080   |  xxxxxxx  | xxxxx | xxxx |
+    | 20000000 | 200      |  1  |  1645937   |  0.71635  | 0.716 | xxxx |
+    | 20000000 | 200      |  2  |  1233739   |  0.95569  | 0.478 | 1.09 |   
+    | 20000000 | 200      |  4  |  1177340   |  1.00148  | 0.250 | 0.99 |
+    | 20000000 | 200      |  8  |  1077170   |  1.09461  | 0.137 | 0.90 |
+    | 20000000 | 200      |  16 |  1221387   |  0.96536  | 0.060 | 1.04 | 
+    |----------|----------|-----|------------|-----------|-------|------|
+    |  2000000 | 2000     | seq |  1183492   |  xxxxxxx  | xxxxx | xxxx |
+    |  2000000 | 2000     |  1  |  1583032   |  0.74761  | 0.748 | xxxx |
+    |  2000000 | 2000     |  2  |  1278765   |  0.92549  | 0.463 | 1.16 |
+    |  2000000 | 2000     |  4  |  1729491   |  0.68430  | 0.171 | 1.62 |
+    |  2000000 | 2000     |  8  |  1722424   |  0.68711  | 0.086 | 1.52 |
+    |  2000000 | 2000     | 16  |  1629645   |  0.72623  | 0.045 | 1.40 |
+    |----------|----------|-----|------------|-----------|-------|------|
+    |    20000 | 200000   | seq |  1167344   |  xxxxxxx  | xxxxx | xxxx |
+    |    20000 | 200000   |  1  |  1996653   |  0.58465  | 0.585 | xxxx |
+    |    20000 | 200000   |  2  |  1705222   |  0.68457  | 0.342 | 1.92 |
+    |    20000 | 200000   |  4  |  1611968   |  0.72417  | 0.181 | 1.51 |
+    |    20000 | 200000   |  8  |  1502905   |  0.77672  | 0.097 | 1.33 |
+    |    20000 | 200000   | 16  |  2251207   |  0.51854  | 0.032 | 1.99 |
+    ---------------------------------------------------------------------
 
-      Explain your results.
+    Explain your results:
 
-
+		As the above numbers show, for virtually all of our test cases the performance
+		increase of the cluster version of ElementaryCA is non existent. The best 
+		performing instances of the cluster version are running on a lower number
+		of machines. The cause for this is the obvious overhead of transmitting
+		a new grid after every step. The actual work done by each worker is not
+		computationally intensive at all. The algorithm is basically an advanced
+		lookup table. This leaves the synchronization of the cell values  over the 
+		network at every step as the major bottle neck. I believe by using a byte
+		as my cell data type I used the smallest possible representable value in
+		Java. I believe even a Java boolean is still represented by an 8 bit integer.
+		I believe my algorithm of only sending the working part of the grid to each node
+		and then patching the resulting grids together at every step is the optimal 
+		possible solution. The only other possible enhancement to my algorithm that I 
+		envisioned was using each individual bit of each byte as a cell in the cellular
+		automaton. This would reduce the total transmitted data by a factor of 8. 
+		This would how ever add increased logic and computation to get and set the proper
+		bit for every cell. This enhancement was very complex and I could never get an
+		exact solution working. It seems at least in my implementation, the sequential 
+		version of the algorithm is the most optimal performing.
+		
