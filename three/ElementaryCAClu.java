@@ -83,10 +83,10 @@ public class ElementaryCAClu {
   /**
    * Get the number of cell's with value 1
    */
-  private static int getCount( byte[] grid ) {
+  private static int getCount( byte[] mygrid ) {
     int counter = 0;
-    for ( int cell = 0; cell < gridSize; ++cell ) {
-      counter += grid[cell];
+    for ( int cell = 0; cell < mygrid.length; ++cell ) {
+      counter += mygrid[cell];
     }
     return counter;
   }
@@ -104,9 +104,9 @@ public class ElementaryCAClu {
   /**
    * The master section to be run on cluster nodes. 
    */
-  private static void masterSection( ) throws Exception {
+  private static void masterSection() throws Exception {
 
-    grid[gridSize/2] = 1;
+    nextGrid[2] = 1;
 
     Range[] ranges = new Range( 0, gridSize-1 ).subranges( worldSize );
     int lb = ranges[rank].lb();
@@ -116,11 +116,7 @@ public class ElementaryCAClu {
     byte[] chunk = new byte[ranges[rank].length()];
     ByteBuf chunkBuf = ByteBuf.buffer( chunk );
 
-    byte[] tmpDest = new byte[gridSize];
-    ByteBuf[] dest = ByteBuf.sliceBuffers( tmpDest, ranges ); 
-
     for ( int i = 0; i < steps; i++ ) {
-
 
       ByteBuf[] buffers = ByteBuf.sliceBuffers( nextGrid, ranges );
       // Send out tasks
@@ -140,7 +136,9 @@ public class ElementaryCAClu {
         iChunk++;
       }
 
-      // Retreive resutls
+      ByteBuf[] dest = ByteBuf.sliceBuffers( grid, ranges ); 
+
+      // Retreive results
       world.gather( 0, chunkBuf, dest );
 
       // Copy all results to buffer
@@ -200,12 +198,11 @@ public class ElementaryCAClu {
       int iChunk = 1;
       for ( int iCell = lb+1; iCell <= ub-1; iCell++ ) {
         // Compute previous and next cell indices
-        int iPrev = (iCell+gridSize-1) % gridSize;
-        int iNext = (iCell+1) % gridSize;
+        int iPrev = (iChunk-1) % gridSize;
+        int iNext = (iChunk+1) % gridSize;
 
         // Compute which bit of the rule to use
-        int bit = (gridBuf.get(iPrev)*4) + (gridBuf.get(iCell)*2) + (gridBuf.get(iNext)*1);
-
+        int bit = (gridBuf.get(iPrev)*4) + (gridBuf.get(iChunk)*2) + (gridBuf.get(iNext)*1);
         chunk[iChunk] = rule[bit];
         iChunk++;
       }
@@ -243,7 +240,7 @@ public class ElementaryCAClu {
 		  // In master process, run master section & worker section.
       masterSection();
       // Count bits with value 1 in the final grid
-      System.out.println( getCount( grid ) );
+      System.out.println( getCount( nextGrid ) );
       System.out.println( "Running time = " +
                           (System.currentTimeMillis()-start) + " msec" );
     } else {
