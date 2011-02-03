@@ -1,3 +1,9 @@
+//******************************************************************************
+//
+// Author: Brian Gianforcaro (bjg1955@cs.rit.edu)
+// File: ElementaryCAClu.java
+//
+//******************************************************************************
 
 
 import edu.rit.util.Range;
@@ -18,7 +24,7 @@ import edu.rit.pj.ParallelSection;
  * <BR><I>numSteps</I> - The number of steps to execute ( an integer )
  *
  * @author  Brian Gianforcaro
- * @version 25-Jan-2011
+ * @version 30-Jan-2011
  */
 public class ElementaryCAClu {
 
@@ -33,9 +39,6 @@ public class ElementaryCAClu {
   static int worldSize;
   static int rank;
 
-  static int GRID_START_MSG = 10;
-  static int CHUNK_DONE_MSG = 20;
-
   private ElementaryCAClu() {}
 
   /**
@@ -43,7 +46,7 @@ public class ElementaryCAClu {
    */
   private static void usage() {
     System.out.println("");
-    System.out.println( "Usage: ElementaryCAClu <rule> <gridSize> <numSteps>\n" );
+    System.out.println( "Usage: java ElementaryCAClu <rule> <gridSize> <numSteps>\n" );
     System.out.println( "   <rule> - The rule to execute ( an integer ) " );
     System.out.println( "   <gridSize> - The size of the grid ( and integer )" );
     System.out.println( "   <numSteps> - The number of steps to execute ( an integer )\n" );
@@ -237,14 +240,14 @@ public class ElementaryCAClu {
     if ( 0 == rank ) {
       grid = new byte[gridSize];
       nextGrid = new byte[gridSize];
-		  // In master process, run master section & worker section.
+      // In master process, run master section & worker section.
       masterSection();
       // Count bits with value 1 in the final grid
       System.out.println( getCount( nextGrid ) );
       System.out.println( "Running time = " +
                           (System.currentTimeMillis()-start) + " msec" );
     } else {
-		  // In worker process, run only worker section.
+      // In worker process, run only worker section.
       workerSection();
     }
   }

@@ -6,10 +6,10 @@ Assignment: Homework #3-2
     |----------|----------|-----|------------|-----------|-------|------|
     | 20000000 | 200      | seq |  1179080   |  xxxxxxx  | xxxxx | xxxx |
     | 20000000 | 200      |  1  |  1645937   |  0.71635  | 0.716 | xxxx |
-    | 20000000 | 200      |  2  |  1233739   |  0.95569  | 0.478 | 1.09 |   
+    | 20000000 | 200      |  2  |  1233739   |  0.95569  | 0.478 | 1.09 |
     | 20000000 | 200      |  4  |  1177340   |  1.00148  | 0.250 | 0.99 |
     | 20000000 | 200      |  8  |  1077170   |  1.09461  | 0.137 | 0.90 |
-    | 20000000 | 200      |  16 |  1221387   |  0.96536  | 0.060 | 1.04 | 
+    | 20000000 | 200      |  16 |  1221387   |  0.96536  | 0.060 | 1.04 |
     |----------|----------|-----|------------|-----------|-------|------|
     |  2000000 | 2000     | seq |  1183492   |  xxxxxxx  | xxxxx | xxxx |
     |  2000000 | 2000     |  1  |  1583032   |  0.74761  | 0.748 | xxxx |
@@ -28,23 +28,23 @@ Assignment: Homework #3-2
 
     Explain your results:
 
-		As the above numbers show, for virtually all of our test cases the performance
-		increase of the cluster version of ElementaryCA is non existent. The best 
-		performing instances of the cluster version are running on a lower number
-		of machines. The cause for this is the obvious overhead of transmitting
-		a new grid after every step. The actual work done by each worker is not
-		computationally intensive at all. The algorithm is basically an advanced
-		lookup table. This leaves the synchronization of the cell values  over the 
-		network at every step as the major bottle neck. I believe by using a byte
-		as my cell data type I used the smallest possible representable value in
-		Java. I believe even a Java boolean is still represented by an 8 bit integer.
-		I believe my algorithm of only sending the working part of the grid to each node
-		and then patching the resulting grids together at every step is the optimal 
-		possible solution. The only other possible enhancement to my algorithm that I 
-		envisioned was using each individual bit of each byte as a cell in the cellular
-		automaton. This would reduce the total transmitted data by a factor of 8. 
-		This would how ever add increased logic and computation to get and set the proper
-		bit for every cell. This enhancement was very complex and I could never get an
-		exact solution working. It seems at least in my implementation, the sequential 
-		version of the algorithm is the most optimal performing.
-		
+    As the above numbers show, for virtually all of our test cases the performance
+    increase of the cluster version of ElementaryCA is non existent. The best 
+    performing instances of the cluster version are running on a lower number
+    of machines. The cause for this is the obvious overhead of transmitting
+    a new grid after every step. The actual work done by each worker is not
+    computationally intensive at all. The algorithm is basically an advanced
+    lookup table. This leaves the synchronization of the cell values  over the 
+    network at every step as the major bottle neck. I believe by using a byte
+    as my cell data type I used the smallest possible representable value in
+    Java. I believe even a Java boolean is still represented by an 8 bit integer.
+    I believe my algorithm of only sending the working part of the grid to each node
+    and then patching the resulting grids together at every step is the optimal 
+    possible solution. The only other possible enhancement to my algorithm that I 
+    envisioned was using each individual bit of each byte as a cell in the cellular
+    automaton. This would reduce the total transmitted data by a factor of 8. 
+    This would how ever add increased logic and computation to get and set the proper
+    bit for every cell. This enhancement was very complex and I could never get an
+    exact solution working. It seems at least in my implementation, the sequential 
+    version of the algorithm is the most optimal performing.
+
