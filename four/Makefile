@@ -6,7 +6,10 @@
 ############################################################
 PJ = ../pj.jar:.
 ARCH := $(shell arch)
-ifeq ("$(ARCH)","i386")
+ifeq ("$(ARCH)","i386") 
+  CC = javac -Xlint:all
+  JAVA = java -cp $(PJ)
+else ifeq ("$(ARCH)","i686")
   CC = javac -Xlint:all
   JAVA = java -cp $(PJ)
 else
@@ -23,16 +26,22 @@ zip: bundle
 
 test: class
 	$(JAVA) -Dpj.np=1  MandelbrotSetSeq $(TEST_ARGS)
+	rm -rf ms.pjg
 	$(JAVA) -Dpj.np=1  MandelbrotSetClu2 $(TEST_ARGS)
+	rm -rf ms.pjg
 	$(JAVA) -Dpj.np=2  MandelbrotSetClu2 $(TEST_ARGS)
+	rm -rf ms.pjg
 	$(JAVA) -Dpj.np=4  MandelbrotSetClu2 $(TEST_ARGS)
+	rm -rf ms.pjg
 	$(JAVA) -Dpj.np=8  MandelbrotSetClu2 $(TEST_ARGS)
+	rm -rf ms.pjg
 	$(JAVA) -Dpj.np=16 MandelbrotSetClu2 $(TEST_ARGS)
-	$(JAVA) -Dpj.np=1  MandelbrotSetClu2Overlap $(TEST_ARGS)
-	$(JAVA) -Dpj.np=2  MandelbrotSetClu2Overlap $(TEST_ARGS)
-	$(JAVA) -Dpj.np=4  MandelbrotSetClu2Overlap $(TEST_ARGS)
-	$(JAVA) -Dpj.np=8  MandelbrotSetClu2Overlap $(TEST_ARGS)
-	$(JAVA) -Dpj.np=16 MandelbrotSetClu2Overlap $(TEST_ARGS)
+	rm -rf ms.pjg
+#	$(JAVA) -Dpj.np=1  MandelbrotSetClu2Overlap $(TEST_ARGS)
+#	$(JAVA) -Dpj.np=2  MandelbrotSetClu2Overlap $(TEST_ARGS)
+#	$(JAVA) -Dpj.np=4  MandelbrotSetClu2Overlap $(TEST_ARGS)
+#	$(JAVA) -Dpj.np=8  MandelbrotSetClu2Overlap $(TEST_ARGS)
+#	$(JAVA) -Dpj.np=16 MandelbrotSetClu2Overlap $(TEST_ARGS)
 
 bundle: hw3-1.txt hw4-2.txt MandelbrotSetClu2Overlap.java
 	zip hw4.zip hw4-1.txt hw4-2.txt MandelbrotSetClu2Overlap.java

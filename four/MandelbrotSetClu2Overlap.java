@@ -1,25 +1,7 @@
 //******************************************************************************
 //
 // File:    MandelbrotSetClu2.java
-// Package: edu.rit.clu.fractal
-// Unit:    Class edu.rit.clu.fractal.MandelbrotSetClu2
-//
-// This Java source file is copyright (C) 2007 by Alan Kaminsky. All rights
-// reserved. For further information, contact the author, Alan Kaminsky, at
-// ark@cs.rit.edu.
-//
-// This Java source file is part of the Parallel Java Library ("PJ"). PJ is free
-// software; you can redistribute it and/or modify it under the terms of the GNU
-// General Public License as published by the Free Software Foundation; either
-// version 3 of the License, or (at your option) any later version.
-//
-// PJ is distributed in the hope that it will be useful, but WITHOUT ANY
-// WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS FOR
-// A PARTICULAR PURPOSE. See the GNU General Public License for more details.
-//
-// A copy of the GNU General Public License is provided in the file gpl.txt. You
-// may also obtain a copy of the GNU General Public License on the World Wide
-// Web at http://www.gnu.org/licenses/gpl.html.
+// Author:  Brian Gianforcaro ( bjg1955@cs.rit.edu )
 //
 //******************************************************************************
 
@@ -48,7 +30,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 
 /**
- * Class MandelbrotSetClu2 is a cluster parallel program that calculates the
+ * Class MandelbrotSetClu2Overlap is a cluster parallel program that calculates the
  * Mandelbrot Set. The program uses the master-worker pattern for load
  * balancing. Each worker process in the program calculates a series of row
  * slices of the Mandelbrot Set image, as assigned by the master process. The
@@ -62,7 +44,7 @@ import java.io.IOException;
  * PJProperties}.
  * <P>
  * Usage: java -Dpj.np=<I>K</I> [ -Dpj.schedule=<I>schedule</I> ]
- * edu.rit.clu.fractal.MandelbrotSetClu2 <I>width</I> <I>height</I>
+ * MandelbrotSetClu2Overlap <I>width</I> <I>height</I>
  * <I>xcenter</I> <I>ycenter</I> <I>resolution</I> <I>maxiter</I> <I>gamma</I>
  * <I>filename</I>
  * <BR><I>K</I> = Number of parallel processes
@@ -104,16 +86,16 @@ import java.io.IOException;
  * image file.
  *
  * @author  Alan Kaminsky
- * @version 28-Dec-2007
+ * @version 16-Feb-2011
  */
 
-public class MandelbrotSetClu2 {
+public class MandelbrotSetClu2Overlap {
 
   //-----------------------
   // Prevent construction.
   //-----------------------
 
-  private MandelbrotSetClu2() { }
+  private MandelbrotSetClu2Overlap() { }
 
   //---------------------------
   // Program shared variables.
@@ -156,24 +138,30 @@ public class MandelbrotSetClu2 {
   //-------------------
   // Main program.
   //-------------------
+ 
+  /**
+   * Print a usage message and exit.
+   */
+  private static void usage() {
+    System.err.println( "Usage: java -Dpj.np=<K> [-Dpj.schedule=<schedule>] MandelbrotSetClu2Overlap <width> <height> <xcenter> <ycenter> <resolution> <maxiter> <gamma> <filename>" );
+    System.err.println( "<K> = Number of parallel processes" );
+    System.err.println( "<schedule> = Load balancing schedule" );
+    System.err.println( "<width> = Image width (pixels)" );
+    System.err.println( "<height> = Image height (pixels)" );
+    System.err.println( "<xcenter> = X coordinate of center point" );
+    System.err.println( "<ycenter> = Y coordinate of center point" );
+    System.err.println( "<resolution> = Pixels per unit" );
+    System.err.println( "<maxiter> = Maximum number of iterations" );
+    System.err.println( "<gamma> = Used to calculate pixel hues" );
+    System.err.println( "<filename> = PJG image file name" );
+    System.exit(1);
+  }
 
   /**
-   * Mandelbrot Set main program.
+   *
+   * @param args - The arguments to parse
    */
-  public static void main( String[] args ) throws Exception {
-    // Start timing.
-    long t1 = System.currentTimeMillis();
-
-    // Initialize middleware.
-    Comm.init (args);
-    world = Comm.world();
-    size = world.size();
-    rank = world.rank();
-
-    // Validate command line arguments.
-    if (args.length != 8) {
-      usage();
-    }
+  private static void parseArgs( String[] args ) {
 
     width = Integer.parseInt( args[0] );
     height = Integer.parseInt( args[1] );
@@ -182,12 +170,20 @@ public class MandelbrotSetClu2 {
     resolution = Double.parseDouble( args[4] );
     maxiter = Integer.parseInt( args[5] );
     gamma = Double.parseDouble( args[6] );
-    filename = new File( args[7] );
 
+    if ( rank == 0 ) {
+      filename = new File( args[7] );
+    }
+ 
     // Initial pixel offsets from center.
     xoffset = -(width - 1) / 2;
     yoffset = (height - 1) / 2;
+  }
 
+  /**
+   * Initialize the static hue table for later use.
+   */
+  private static void initHueTable() {
     // Create table of hues for different iteration counts.
     huetable = new int [maxiter+1];
     for ( int i = 0; i < maxiter; ++i ) {
@@ -195,105 +191,8 @@ public class MandelbrotSetClu2 {
       huetable[i] = HSB.pack( /*hue*/ hue,
                               /*sat*/ 1.0f,
                               /*bri*/ 1.0f );
-                  }
-
+    }
     huetable[maxiter] = HSB.pack( 1.0f, 1.0f, 0.0f );
-
-    long t2 = System.currentTimeMillis();
-
-    // In master process, run master section and worker section in parallel.
-    if (rank == 0) {
-      new ParallelTeam(2).execute (new ParallelRegion() {
-        public void run() throws Exception {
-          execute( new ParallelSection() {
-            public void run() throws Exception {
-                    masterSection();
-            }
-          },
-          new ParallelSection() {
-            public void run() throws Exception {
-              workerSection();
-            }
-          });
-        }
-      });
-    } else { // In worker process, run only worker section.
-      workerSection();
-    }
-
-    long t3 = System.currentTimeMillis();
-
-    // Write image to PJG file in master process.
-    if (rank == 0) {
-      FileOutputStream fOutStream = new FileOutputStream( filename );
-      BufferedOutputStream ostream = new BufferedOutputStream( fOutStream );
-      image = new PJGColorImage( height, width, matrix );
-      PJGImage.Writer writer = image.prepareToWrite( ostream );
-      writer.write();
-      writer.close();
-    }
-
-    // Stop timing.
-    long t4 = System.currentTimeMillis();
-    System.out.println( chunkCount + " chunks " + rank );
-    System.out.println( (t2-t1) + " msec pre " + rank );
-    System.out.println( (t3-t2) + " msec calc " + rank );
-    System.out.println( (t4-t3) + " msec post " + rank );
-    System.out.println( (t4-t1) + " msec total " + rank );
-  }
-
-  //-------------------
-  // Hidden operations.
-  //-------------------
-
-  /**
-  * Perform the master section.
-  *
-  * @exception IOException Thrown if an I/O error occurred.
-  */
-  private static void masterSection() throws IOException {
-
-    int worker;
-    Range range;
-
-    // Allocate all rows of image matrix.
-    matrix = new int [height][width];
-
-    // Set up a schedule object to divide the row range into chunks.
-    IntegerSchedule schedule = IntegerSchedule.runtime();
-    schedule.start( size, new Range( 0, height-1 ) );
-
-    // Send initial chunk range to each worker. If range is null, no more
-    // work for that worker. Keep count of active workers.
-    int activeWorkers = size;
-    for (worker = 0; worker < size; ++ worker) {
-      range = schedule.next( worker );
-      world.send( worker, WORKER_MSG, ObjectBuf.buffer( range ) );
-      if (range == null) { 
-        -- activeWorkers;
-      }
-    }
-
-    // Repeat until all workers have finished.
-    while ( activeWorkers > 0 ) {
-      // Receive a chunk range from any worker.
-      ObjectItemBuf<Range> rangeBuf = ObjectBuf.buffer();
-      CommStatus status = world.receive (null, MASTER_MSG, rangeBuf);
-      worker = status.fromRank;
-      range = rangeBuf.item;
-
-      // Receive pixel data from that specific worker.
-      world.receive( worker, PIXEL_DATA_MSG,
-                     IntegerBuf.rowSliceBuffer( matrix, range ) );
-
-      // Send next chunk range to that specific worker. If null, no more
-      // work.
-      range = schedule.next (worker);
-      world.send (worker, WORKER_MSG, ObjectBuf.buffer (range));
-      if (range == null) {
-        -- activeWorkers;
-      }
-    }
   }
 
   /**
@@ -305,14 +204,14 @@ public class MandelbrotSetClu2 {
     int[][] slice = null;
 
     // Process chunks from master.
-    while (true ) {
+    while ( true ) {
 
       // Receive chunk range from master. If null, no more work.
       ObjectItemBuf<Range> rangeBuf = ObjectBuf.buffer();
       world.receive( 0, WORKER_MSG, rangeBuf );
       Range range = rangeBuf.item;
 
-      if (range == null) {
+      if ( range == null ) {
         break;
       }
 
@@ -359,25 +258,130 @@ public class MandelbrotSetClu2 {
       world.send( 0, MASTER_MSG, rangeBuf );
 
       // Send pixel data to master.
-      world.send( 0, PIXEL_DATA_MSG, IntegerBuf.rowSliceBuffer( slice, new Range( 0, len-1 ) ) );
+      world.send( 0, PIXEL_DATA_MSG,
+                  IntegerBuf.rowSliceBuffer( slice, new Range( 0, len-1 ) ) );
     }
   }
 
   /**
-   * Print a usage message and exit.
+   * Perform the master section.
+   * @exception IOException Thrown if an I/O error occurred.
    */
-  private static void usage() {
-    System.err.println ("Usage: java -Dpj.np=<K> [-Dpj.schedule=<schedule>] edu.rit.clu.fractal.MandelbrotSetClu2 <width> <height> <xcenter> <ycenter> <resolution> <maxiter> <gamma> <filename>");
-    System.err.println ("<K> = Number of parallel processes");
-    System.err.println ("<schedule> = Load balancing schedule");
-    System.err.println ("<width> = Image width (pixels)");
-    System.err.println ("<height> = Image height (pixels)");
-    System.err.println ("<xcenter> = X coordinate of center point");
-    System.err.println ("<ycenter> = Y coordinate of center point");
-    System.err.println ("<resolution> = Pixels per unit");
-    System.err.println ("<maxiter> = Maximum number of iterations");
-    System.err.println ("<gamma> = Used to calculate pixel hues");
-    System.err.println ("<filename> = PJG image file name");
-    System.exit (1);
+  private static void masterSection() throws IOException {
+
+    int worker;
+    Range range;
+
+    // Allocate all rows of image matrix.
+    matrix = new int [height][width];
+
+    // Set up a schedule object to divide the row range into chunks.
+    IntegerSchedule schedule = IntegerSchedule.runtime();
+    schedule.start( size, new Range( 0, height-1 ) );
+
+    // Send initial chunk range to each worker. If range is null, no more
+    // work for that worker. Keep count of active workers.
+    int activeWorkers = size;
+    for ( worker = 0; worker < size; ++worker ) {
+      range = schedule.next( worker );
+      world.send( worker, WORKER_MSG, ObjectBuf.buffer( range ) );
+      if (range == null) { 
+        --activeWorkers;
+      }
+    }
+
+    // Repeat until all workers have finished.
+    while ( activeWorkers > 0 ) {
+      // Receive a chunk range from any worker.
+      ObjectItemBuf<Range> rangeBuf = ObjectBuf.buffer();
+      CommStatus status = world.receive( null, MASTER_MSG, rangeBuf );
+      worker = status.fromRank;
+      range = rangeBuf.item;
+
+      // Receive pixel data from that specific worker.
+      world.receive( worker, PIXEL_DATA_MSG,
+                     IntegerBuf.rowSliceBuffer( matrix, range ) );
+
+      // Send next chunk range to that specific worker. If null, no more
+      // work.
+      range = schedule.next( worker );
+      world.send( worker, WORKER_MSG, ObjectBuf.buffer( range ) );
+      if (range == null) {
+        --activeWorkers;
+      }
+    }
   }
+
+  
+  /**
+   * Mandelbrot Set main program.
+   */
+  public static void main( String[] args ) throws Exception {
+
+    // Start timing.
+    long t1 = System.currentTimeMillis();
+
+    // Initialize middle ware.
+    Comm.init( args );
+    world = Comm.world();
+    size = world.size();
+    rank = world.rank();
+
+    // Validate command line arguments.
+    if (args.length != 8) {
+      usage();
+    }
+
+    parseArgs( args );
+    initHueTable();
+    
+    long t2 = System.currentTimeMillis();
+
+    if (rank == 0) {
+      // In master process, run master section and worker section in parallel.
+      new ParallelTeam(2).execute( new ParallelRegion() {
+        public void run() throws Exception {
+          execute( new ParallelSection() {
+            public void run() throws Exception {
+              masterSection();
+            }
+          },
+          new ParallelSection() {
+            public void run() throws Exception {
+              workerSection();
+            }
+          });
+        }
+      });
+    } else { 
+      // In worker process, run only worker section.
+      workerSection();
+    }
+
+    long t3 = System.currentTimeMillis();
+
+    // Write image to PJG file in master process.
+    if ( rank == 0 ) {
+      FileOutputStream fOutStream = new FileOutputStream( filename );
+      BufferedOutputStream ostream = new BufferedOutputStream( fOutStream );
+      image = new PJGColorImage( height, width, matrix );
+      PJGImage.Writer writer = image.prepareToWrite( ostream );
+      writer.write();
+      writer.close();
+    }
+
+    // Stop timing.
+    long t4 = System.currentTimeMillis();
+    System.out.println( chunkCount + " chunks " + rank );
+    System.out.println( (t2-t1) + " msec pre " + rank );
+    System.out.println( (t3-t2) + " msec calc " + rank );
+    System.out.println( (t4-t3) + " msec post " + rank );
+    System.out.println( (t4-t1) + " msec total " + rank );
+  }
+
+  //-------------------
+  // Hidden operations.
+  //-------------------
+
+
 }
