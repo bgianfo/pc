@@ -201,23 +201,13 @@ public class MandelbrotSetClu2Overlap {
   }
 
 
+  /**
+   * Swap in/out buffers
+   */
   private static void swap() {
-
-		int[][] tmp = slice;
-		slice = sliceTmp;
-		sliceTmp = tmp;
-
-		/*
-    if ( sliceTmp == null || sliceTmp.length != slice.length ) {
-      sliceTmp = new int[slice.length][width];
-    }
-
-    for ( int i = 0; i < slice.length; ++i ) {
-      for ( int j = 0; j < width; ++j ) {
-        sliceTmp[i][j] = slice[i][j];
-      }
-    }
-		*/
+    int[][] tmp = slice;
+    slice = sliceTmp;
+    sliceTmp = tmp;
   }
 
   private static void computeSlice( int lb, int ub, int len ) {
@@ -325,8 +315,8 @@ public class MandelbrotSetClu2Overlap {
     // Allocate all rows of image matrix.
     matrix = new int[height][width];
 
-		//
-		CommRequest request = new CommRequest();
+    // CommRequest for async data retreive
+    CommRequest request = new CommRequest();
 
     // Set up a schedule object to divide the row range into chunks.
     IntegerSchedule schedule = IntegerSchedule.runtime();
@@ -360,8 +350,8 @@ public class MandelbrotSetClu2Overlap {
       // Send next chunk range to that specific worker.
       world.send( worker, WORKER_MSG, ObjectBuf.buffer( nextRange ) );
 
-			// Make sure last request is done.
-			request.waitForFinish();
+      // Make sure last request is done.
+      request.waitForFinish();
 			
       // Receive pixel data from that specific worker.
       world.receive( worker, PIXEL_DATA_MSG,
