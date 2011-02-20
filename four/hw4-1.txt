@@ -4,18 +4,51 @@ Assignment: Homework #4-1
 
 Building Parallel Programs, Part III Exercises:
 
+    Measurements of the sequential heat distribution program in Chapter 30
+    running on the "tardis" cluster show that the running time of the
+    calculation section Tcalc, and the number of iterations, for an n x n
+    mesh for various mesh sizes 
+
+
+      --------------------------------
+      |  N   | T (msec) | Iterations |
+      |-------------------------------
+      | 1260 |   60950  |       2539 |
+      | 1590 |  122652  |       3233 |
+      | 2000 |  266850  |       4099 |
+      | 2520 |  564505  |       5204 |
+      | 3180 |  993789  |       6618 |
+      | 4000 | 2048529  |       8388 |
+      --------------------------------
+
+
   a) Exercise 50 (p. 579)
      Note: Formula should be for calculation time in seconds.
 
+     Derive a formula for the calculation time for one iteration
+     of the function of n, the mesh size.
+
   b) Exercise 51 (p. 579)
+
+     For the parallel version of the program, derive a formula
+     for the communication time for one iteration as a function 
+     of n, the mesh size, and K, the number of processors. Use
+     the message send time model for the "tardis" cluster. 
+     Assume each process runs on a different processor. 
 
   c) Exercise 52 (p. 579)
      Note: Formulas should be for speedup and efficiency of one
            iteration of the parallel version.
 
+     Taking into account the calculation and the communication, derive 
+     formulas for the speedup and efficiency of the parallel version as a 
+     function of n, the mesh sie, and K, the number of processors.
+
   d) Exercise 53 (p. 579)
      Note: Be sure to explain what happens to speedup and efficiency as K
            increases (and n remains constant) and as n increases (and K remains constant).
+
+     What does the preceding model tell you about the program's scalability.
 
   e) How many parallel processes should be used to obtain the smallest running time and
      what is the corresponding speedup for a 1260 × 1260-element mesh?
@@ -25,6 +58,10 @@ Building Parallel Programs, Part III Exercises:
      Note: Complete the following table as part of the comparison.
      Be sure to take the number of iterations into account for the predicted running time,
      speedup, and efficiency.
+
+     Compare the speedups and efficiencies predicted by the preceding model
+     with those measured in Table 30.1. What is causing the discrepancy if any? 
+     ( Hint: The running times in Table 30.1 are for the entire program ).
 
 
         -----------------------------------------------------------------
