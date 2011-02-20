@@ -1,10 +1,10 @@
 //******************************************************************************
 //
-// File:    MSHistogramClu.java
+// File:    MSHistogramCluNew.java
 // Package: edu.rit.clu.fractal
-// Unit:    Class edu.rit.clu.fractal.MSHistogramClu
+// Unit:    Class edu.rit.clu.fractal.MSHistogramCluNew
 //
-// This Java source file is copyright (C) 2007 by Alan Kaminsky. All rights
+// This Java source file is copyright (C) 2009 by Alan Kaminsky. All rights
 // reserved. For further information, contact the author, Alan Kaminsky, at
 // ark@cs.rit.edu.
 //
@@ -26,33 +26,25 @@
 //package edu.rit.clu.fractal;
 
 import edu.rit.mp.IntegerBuf;
-import edu.rit.mp.ObjectBuf;
-
-import edu.rit.mp.buf.ObjectItemBuf;
 
 import edu.rit.pj.Comm;
-import edu.rit.pj.CommStatus;
-import edu.rit.pj.IntegerSchedule;
-import edu.rit.pj.ParallelRegion;
-import edu.rit.pj.ParallelSection;
-import edu.rit.pj.ParallelTeam;
+import edu.rit.pj.WorkerIntegerForLoop;
+import edu.rit.pj.WorkerRegion;
+import edu.rit.pj.WorkerTeam;
 
 import edu.rit.pj.reduction.IntegerOp;
-
-import edu.rit.util.Range;
 
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 
 /**
- * Class MSHistogramClu is a cluster parallel program that calculates a
+ * Class MSHistogramCluNew is a cluster parallel program that calculates a
  * histogram of the Mandelbrot Set.
  * <P>
  * Usage: java -Dpj.np=<I>K</I> [-Dpj.schedule=<I>schedule</I>]
- * edu.rit.clu.fractal.MSHistogramClu <I>width</I> <I>height</I> <I>xcenter</I>
+ * edu.rit.clu.fractal.MSHistogramCluNew <I>width</I> <I>height</I> <I>xcenter</I>
  * <I>ycenter</I> <I>resolution</I> <I>maxiter</I> <I>outfile</I>
  * <BR><I>K</I> = Number of parallel processes
  * <BR><I>schedule</I> = Load balancing schedule
@@ -75,14 +67,14 @@ import java.io.PrintWriter;
  * output.
  *
  * @author  Alan Kaminsky
- * @version 02-Feb-2008
+ * @version 26-Dec-2009
  */
-public class MSHistogramClu
+public class MSHistogramCluNew
         {
 
 // Prevent construction.
 
-        private MSHistogramClu()
+        private MSHistogramCluNew()
                 {
                 }
 
@@ -109,10 +101,8 @@ public class MSHistogramClu
         // Histogram (array of counters indexed by pixel value).
         static int[] histogram;
 
-        // Message tags.
-        static final int WORKER_MSG = 0;
-        static final int MASTER_MSG = 1;
-        static final int HISTOGRAM_DATA_MSG = 2;
+        // Message tag.
+        static final int HISTOGRAM_DATA_MSG = Integer.MAX_VALUE;
 
         // Number of chunks the worker computed.
         static int chunkCount;
@@ -154,36 +144,53 @@ public class MSHistogramClu
 
                 long t2 = System.currentTimeMillis();
 
-                // In master process, run master section and worker section in parallel.
-                if (rank == 0)
+                // Compute pixels in parallel.
+                new WorkerTeam().execute (new WorkerRegion()
                         {
-                        new ParallelTeam(2).execute (new ParallelRegion()
+                        public void run() throws Exception
                                 {
-                                public void run() throws Exception
+                                execute (0, height-1, new WorkerIntegerForLoop()
                                         {
-                                        execute (new ParallelSection()
+                                        // Compute chunk of pixels, rows lb .. ub.
+                                        public void run (int lb, int ub) throws Exception
                                                 {
-                                                public void run() throws Exception
-                                                        {
-                                                        masterSection();
-                                                        }
-                                                },
-                                        new ParallelSection()
-                                                {
-                                                public void run() throws Exception
-                                                        {
-                                                        workerSection();
-                                                        }
-                                                });
-                                        }
-                                });
-                        }
+                                                // Count chunks.
+                                                ++ chunkCount;
 
-                // In worker process, run only worker section.
-                else
-                        {
-                        workerSection();
-                        }
+                                                // Compute pixels.
+                                                for (int r = lb; r <= ub; ++ r)
+                                                        {
+                                                        double y = ycenter + (yoffset - r) / resolution;
+
+                                                        for (int c = 0; c < width; ++ c)
+                                                                {
+                                                                double x = xcenter + (xoffset + c) / resolution;
+
+                                                                // Iterate until convergence.
+                                                                int i = 0;
+                                                                double aold = 0.0;
+                                                                double bold = 0.0;
+                                                                double a = 0.0;
+                                                                double b = 0.0;
+                                                                double zmagsqr = 0.0;
+                                                                while (i < maxiter && zmagsqr <= 4.0)
+                                                                        {
+                                                                        ++ i;
+                                                                        a = aold*aold - bold*bold + x;
+                                                                        b = 2.0*aold*bold + y;
+                                                                        zmagsqr = a*a + b*b;
+                                                                        aold = a;
+                                                                        bold = b;
+                                                                        }
+
+                                                                // Increment histogram counter for pixel value.
+                                                                ++ histogram[i];
+                                                                }
+                                                        }
+                                                }
+                                        });
+                                }
+                        });
 
                 // Reduce histogram into process 0.
                 world.reduce
@@ -223,110 +230,11 @@ public class MSHistogramClu
 // Hidden operations.
 
         /**
-         * Perform the master section.
-         *
-         * @exception  IOException
-         *     Thrown if an I/O error occurred.
-         */
-        private static void masterSection()
-                throws IOException
-                {
-                int worker;
-                Range range;
-
-                // Set up a schedule object to divide the row range into chunks.
-                IntegerSchedule schedule = IntegerSchedule.runtime();
-                schedule.start (size, new Range (0, height-1));
-
-                // Send initial chunk range to each worker. If range is null, no more
-                // work for that worker. Keep count of active workers.
-                int activeWorkers = size;
-                for (worker = 0; worker < size; ++ worker)
-                        {
-                        range = schedule.next (worker);
-                        world.send (worker, WORKER_MSG, ObjectBuf.buffer (range));
-                        if (range == null) -- activeWorkers;
-                        }
-
-                // Repeat until all workers have finished.
-                while (activeWorkers > 0)
-                        {
-                        // Receive an empty message from any worker.
-                        CommStatus status =
-                                world.receive (null, MASTER_MSG, IntegerBuf.emptyBuffer());
-                        worker = status.fromRank;
-
-                        // Send next chunk range to that specific worker. If null, no more
-                        // work.
-                        range = schedule.next (worker);
-                        world.send (worker, WORKER_MSG, ObjectBuf.buffer (range));
-                        if (range == null) -- activeWorkers;
-                        }
-                }
-
-        /**
-         * Perform the worker section.
-         *
-         * @exception  IOException
-         *     Thrown if an I/O error occurred.
-         */
-        private static void workerSection()
-                throws IOException
-                {
-                // Process chunks from master.
-                for (;;)
-                        {
-                        // Receive chunk range from master. If null, no more work.
-                        ObjectItemBuf<Range> rangeBuf = ObjectBuf.buffer();
-                        world.receive (0, WORKER_MSG, rangeBuf);
-                        Range range = rangeBuf.item;
-                        if (range == null) break;
-                        int lb = range.lb();
-                        int ub = range.ub();
-                        ++ chunkCount;
-
-                        // Compute all rows and columns in slice.
-                        for (int r = lb; r <= ub; ++ r)
-                                {
-                                double y = ycenter + (yoffset - r) / resolution;
-
-                                for (int c = 0; c < width; ++ c)
-                                        {
-                                        double x = xcenter + (xoffset + c) / resolution;
-
-                                        // Iterate until convergence.
-                                        int i = 0;
-                                        double aold = 0.0;
-                                        double bold = 0.0;
-                                        double a = 0.0;
-                                        double b = 0.0;
-                                        double zmagsqr = 0.0;
-                                        while (i < maxiter && zmagsqr <= 4.0)
-                                                {
-                                                ++ i;
-                                                a = aold*aold - bold*bold + x;
-                                                b = 2.0*aold*bold + y;
-                                                zmagsqr = a*a + b*b;
-                                                aold = a;
-                                                bold = b;
-                                                }
-
-                                        // Increment histogram counter for pixel value.
-                                        ++ histogram[i];
-                                        }
-                                }
-
-                        // Report completion of slice to master.
-                        world.send (0, MASTER_MSG, IntegerBuf.emptyBuffer());
-                        }
-                };
-
-        /**
          * Print a usage message and exit.
          */
         private static void usage()
                 {
-                System.err.println ("Usage: java -Dpj.np=<K> [-Dpj.schedule=<schedule>] edu.rit.clu.fractal.MSHistogramClu <width> <height> <xcenter> <ycenter> <resolution> <maxiter> <outfile>");
+                System.err.println ("Usage: java -Dpj.np=<K> [-Dpj.schedule=<schedule>] edu.rit.clu.fractal.MSHistogramCluNew <width> <height> <xcenter> <ycenter> <resolution> <maxiter> <outfile>");
                 System.err.println ("<K> = Number of parallel processes");
                 System.err.println ("<schedule> = Load balancing schedule");
                 System.err.println ("<width> = Image width (pixels)");

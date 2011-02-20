@@ -58,104 +58,104 @@ import edu.rit.util.Random;
  * @version 27-Jun-2007
  */
 public class PiClu
-	{
+        {
 
 // Prevent construction.
 
-	private PiClu()
-		{
-		}
+        private PiClu()
+                {
+                }
 
 // Program shared variables.
 
-	// World communicator.
-	static Comm world;
-	static int size;
-	static int rank;
+        // World communicator.
+        static Comm world;
+        static int size;
+        static int rank;
 
-	// Command line arguments.
-	static long seed;
-	static long N;
+        // Command line arguments.
+        static long seed;
+        static long N;
 
-	// Pseudorandom number generator.
-	static Random prng;
+        // Pseudorandom number generator.
+        static Random prng;
 
-	// Number of points within the unit circle.
-	static long count;
+        // Number of points within the unit circle.
+        static long count;
 
 // Main program.
 
-	/**
-	 * Main program.
-	 */
-	public static void main
-		(String[] args)
-		throws Exception
-		{
-		// Start timing.
-		long time = -System.currentTimeMillis();
+        /**
+         * Main program.
+         */
+        public static void main
+                (String[] args)
+                throws Exception
+                {
+                // Start timing.
+                long time = -System.currentTimeMillis();
 
-		// Initialize middleware.
-		Comm.init (args);
-		world = Comm.world();
-		size = world.size();
-		rank = world.rank();
+                // Initialize middleware.
+                Comm.init (args);
+                world = Comm.world();
+                size = world.size();
+                rank = world.rank();
 
-		// Validate command line arguments.
-		if (args.length != 2) usage();
-		seed = Long.parseLong (args[0]);
-		N = Long.parseLong (args[1]);
+                // Validate command line arguments.
+                if (args.length != 2) usage();
+                seed = Long.parseLong (args[0]);
+                N = Long.parseLong (args[1]);
 
-		// Determine range of iterations for this thread.
-		LongRange range = new LongRange (0, N-1) .subrange (size, rank);
-		long my_N = range.length();
+                // Determine range of iterations for this thread.
+                LongRange range = new LongRange (0, N-1) .subrange (size, rank);
+                long my_N = range.length();
 
-		// Set up PRNG and skip ahead over the random numbers the lower-ranked
-		// processes will generate.
-		prng = Random.getInstance (seed);
-		prng.skip (2 * range.lb());
+                // Set up PRNG and skip ahead over the random numbers the lower-ranked
+                // processes will generate.
+                prng = Random.getInstance (seed);
+                prng.skip (2 * range.lb());
 
-		// Generate random points in the unit square, count how many are in the
-		// unit circle.
-		count = 0L;
-		for (long i = 0L; i < my_N; ++ i)
-			{
-			double x = prng.nextDouble();
-			double y = prng.nextDouble();
-			if (x*x + y*y <= 1.0) ++ count;
-			}
+                // Generate random points in the unit square, count how many are in the
+                // unit circle.
+                count = 0L;
+                for (long i = 0L; i < my_N; ++ i)
+                        {
+                        double x = prng.nextDouble();
+                        double y = prng.nextDouble();
+                        if (x*x + y*y <= 1.0) ++ count;
+                        }
 
-		// Reduce all processes' counts together into process 0.
-		LongItemBuf buf = new LongItemBuf();
-		buf.item = count;
-		world.reduce (0, buf, LongOp.SUM);
-		count = buf.item;
+                // Reduce all processes' counts together into process 0.
+                LongItemBuf buf = new LongItemBuf();
+                buf.item = count;
+                world.reduce (0, buf, LongOp.SUM);
+                count = buf.item;
 
-		// Stop timing.
-		time += System.currentTimeMillis();
+                // Stop timing.
+                time += System.currentTimeMillis();
 
-		// Print results.
-		System.out.println (time + " msec total " + rank);
-		if (rank == 0)
-			{
-			System.out.println
-				("pi = 4 * " + count + " / " + N + " = " +
-				 (4.0 * count / N));
-			}
-		}
+                // Print results.
+                System.out.println (time + " msec total " + rank);
+                if (rank == 0)
+                        {
+                        System.out.println
+                                ("pi = 4 * " + count + " / " + N + " = " +
+                                 (4.0 * count / N));
+                        }
+                }
 
 // Hidden operations.
 
-	/**
-	 * Print a usage message and exit.
-	 */
-	private static void usage()
-		{
-		System.err.println ("Usage: java -Dpj.np=<K> edu.rit.clu.monte.PiClu <seed> <N>");
-		System.err.println ("<K> = Number of parallel processes");
-		System.err.println ("<seed> = Random seed");
-		System.err.println ("<N> = Number of random points");
-		System.exit (1);
-		}
+        /**
+         * Print a usage message and exit.
+         */
+        private static void usage()
+                {
+                System.err.println ("Usage: java -Dpj.np=<K> edu.rit.clu.monte.PiClu <seed> <N>");
+                System.err.println ("<K> = Number of parallel processes");
+                System.err.println ("<seed> = Random seed");
+                System.err.println ("<N> = Number of random points");
+                System.exit (1);
+                }
 
-	}
+        }

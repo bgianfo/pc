@@ -85,145 +85,145 @@ import java.io.FileOutputStream;
  * @version 07-Jan-2008
  */
 public class FloydClu
-	{
+        {
 
 // Prevent construction.
 
-	private FloydClu()
-		{
-		}
+        private FloydClu()
+                {
+                }
 
 // Shared variables.
 
-	// World communicator.
-	static Comm world;
-	static int size;
-	static int rank;
+        // World communicator.
+        static Comm world;
+        static int size;
+        static int rank;
 
-	// Number of nodes.
-	static int n;
+        // Number of nodes.
+        static int n;
 
-	// Distance matrix.
-	static double[][] d;
+        // Distance matrix.
+        static double[][] d;
 
-	// Row broadcast from another process.
-	static double[] row_i;
-	static DoubleBuf row_i_buf;
+        // Row broadcast from another process.
+        static double[] row_i;
+        static DoubleBuf row_i_buf;
 
 // Main program.
 
-	/**
-	 * Main program.
-	 */
-	public static void main
-		(String[] args)
-		throws Throwable
-		{
-		// Start timing.
-		long t1 = System.currentTimeMillis();
+        /**
+         * Main program.
+         */
+        public static void main
+                (String[] args)
+                throws Throwable
+                {
+                // Start timing.
+                long t1 = System.currentTimeMillis();
 
-		// Initialize world communicator.
-		Comm.init (args);
-		world = Comm.world();
-		size = world.size();
-		rank = world.rank();
+                // Initialize world communicator.
+                Comm.init (args);
+                world = Comm.world();
+                size = world.size();
+                rank = world.rank();
 
-		// Parse command line arguments.
-		if (args.length != 2) usage();
-		File infile = new File (args[0]);
-		File outfile = new File (args[1]);
+                // Parse command line arguments.
+                if (args.length != 2) usage();
+                File infile = new File (args[0]);
+                File outfile = new File (args[1]);
 
-		// Prepare to read distance matrix from input file; determine matrix
-		// dimensions.
-		DoubleMatrixFile in = new DoubleMatrixFile();
-		DoubleMatrixFile.Reader reader =
-			in.prepareToRead
-				(new BufferedInputStream
-					(new FileInputStream (infile)));
-		d = in.getMatrix();
-		n = d.length;
+                // Prepare to read distance matrix from input file; determine matrix
+                // dimensions.
+                DoubleMatrixFile in = new DoubleMatrixFile();
+                DoubleMatrixFile.Reader reader =
+                        in.prepareToRead
+                                (new BufferedInputStream
+                                        (new FileInputStream (infile)));
+                d = in.getMatrix();
+                n = d.length;
 
-		// Divide distance matrix into equal row slices.
-		Range[] ranges = new Range (0, n-1) .subranges (size);
-		Range myrange = ranges[rank];
-		int mylb = myrange.lb();
-		int myub = myrange.ub();
+                // Divide distance matrix into equal row slices.
+                Range[] ranges = new Range (0, n-1) .subranges (size);
+                Range myrange = ranges[rank];
+                int mylb = myrange.lb();
+                int myub = myrange.ub();
 
-		// Read just this process's row slice of the distance matrix.
-		reader.readRowSlice (myrange);
-		reader.close();
+                // Read just this process's row slice of the distance matrix.
+                reader.readRowSlice (myrange);
+                reader.close();
 
-		// Allocate storage for row broadcast from another process.
-		row_i = new double [n];
-		row_i_buf = DoubleBuf.buffer (row_i);
+                // Allocate storage for row broadcast from another process.
+                row_i = new double [n];
+                row_i_buf = DoubleBuf.buffer (row_i);
 
-		long t2 = System.currentTimeMillis();
+                long t2 = System.currentTimeMillis();
 
-		// Run Floyd's Algorithm.
-		//     for i = 0 to N-1
-		//         for r = 0 to N-1
-		//             for c = 0 to N-1
-		//                 D[r,c] = min (D[r,c], D[r,i] + D[i,c])
-		int i_root = 0;
-		for (int i = 0; i < n; ++ i)
-			{
-			double[] d_i = d[i];
+                // Run Floyd's Algorithm.
+                //     for i = 0 to N-1
+                //         for r = 0 to N-1
+                //             for c = 0 to N-1
+                //                 D[r,c] = min (D[r,c], D[r,i] + D[i,c])
+                int i_root = 0;
+                for (int i = 0; i < n; ++ i)
+                        {
+                        double[] d_i = d[i];
 
-			// Determine which process owns row i.
-			if (! ranges[i_root].contains (i)) ++ i_root;
+                        // Determine which process owns row i.
+                        if (! ranges[i_root].contains (i)) ++ i_root;
 
-			// Broadcast row i from owner process to all processes.
-			if (rank == i_root)
-				{
-				world.broadcast (i_root, DoubleBuf.buffer (d_i));
-				}
-			else
-				{
-				world.broadcast (i_root, row_i_buf);
-				d_i = row_i;
-				}
+                        // Broadcast row i from owner process to all processes.
+                        if (rank == i_root)
+                                {
+                                world.broadcast (i_root, DoubleBuf.buffer (d_i));
+                                }
+                        else
+                                {
+                                world.broadcast (i_root, row_i_buf);
+                                d_i = row_i;
+                                }
 
-			// Inner loops over rows in my slice and over all columns.
-			for (int r = mylb; r <= myub; ++ r)
-				{
-				double[] d_r = d[r];
-				for (int c = 0; c < n; ++ c)
-					{
-					d_r[c] = Math.min (d_r[c], d_r[i] + d_i[c]);
-					}
-				}
-			}
+                        // Inner loops over rows in my slice and over all columns.
+                        for (int r = mylb; r <= myub; ++ r)
+                                {
+                                double[] d_r = d[r];
+                                for (int c = 0; c < n; ++ c)
+                                        {
+                                        d_r[c] = Math.min (d_r[c], d_r[i] + d_i[c]);
+                                        }
+                                }
+                        }
 
-		long t3 = System.currentTimeMillis();
+                long t3 = System.currentTimeMillis();
 
-		// Write distance matrix slice to a separate output file in each
-		// process.
-		DoubleMatrixFile out = new DoubleMatrixFile (n, n, d);
-		DoubleMatrixFile.Writer writer =
-			out.prepareToWrite
-				(new BufferedOutputStream
-					(new FileOutputStream
-						(Files.fileForRank (outfile, rank))));
-		writer.writeRowSlice (myrange);
-		writer.close();
+                // Write distance matrix slice to a separate output file in each
+                // process.
+                DoubleMatrixFile out = new DoubleMatrixFile (n, n, d);
+                DoubleMatrixFile.Writer writer =
+                        out.prepareToWrite
+                                (new BufferedOutputStream
+                                        (new FileOutputStream
+                                                (Files.fileForRank (outfile, rank))));
+                writer.writeRowSlice (myrange);
+                writer.close();
 
-		// Stop timing.
-		long t4 = System.currentTimeMillis();
-		System.out.println ((t2-t1) + " msec pre " + rank);
-		System.out.println ((t3-t2) + " msec calc " + rank);
-		System.out.println ((t4-t3) + " msec post " + rank);
-		System.out.println ((t4-t1) + " msec total " + rank);
-		}
+                // Stop timing.
+                long t4 = System.currentTimeMillis();
+                System.out.println ((t2-t1) + " msec pre " + rank);
+                System.out.println ((t3-t2) + " msec calc " + rank);
+                System.out.println ((t4-t3) + " msec post " + rank);
+                System.out.println ((t4-t1) + " msec total " + rank);
+                }
 
 // Hidden operations.
 
-	private static void usage()
-		{
-		System.err.println ("Usage: java -Dpj.np=<K> edu.rit.clu.network.FloydClu <infile> <outfile>");
-		System.err.println ("<K> = Number of parallel processes");
-		System.err.println ("<infile> = Input distance matrix file");
-		System.err.println ("<outfile> = Output distance matrix file");
-		System.exit (1);
-		}
+        private static void usage()
+                {
+                System.err.println ("Usage: java -Dpj.np=<K> edu.rit.clu.network.FloydClu <infile> <outfile>");
+                System.err.println ("<K> = Number of parallel processes");
+                System.err.println ("<infile> = Input distance matrix file");
+                System.err.println ("<outfile> = Output distance matrix file");
+                System.exit (1);
+                }
 
-	}
+        }
