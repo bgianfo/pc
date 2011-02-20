@@ -214,7 +214,7 @@ public class MandelbrotSetClu2Overlap {
     }
   }
 
-  private static void computeSlice( int ub, int lb, int len ) {
+  private static void computeSlice( int lb, int ub, int len ) {
 
     // Allocate storage for matrix row slice if necessary.
     if ( slice == null || slice.length < len ) {
@@ -297,8 +297,10 @@ public class MandelbrotSetClu2Overlap {
       range = rangeBuf.item;
 
       // Send pixel data to master.
-      world.send( 0, PIXEL_DATA_MSG,
-                  IntegerBuf.rowSliceBuffer( sliceTmp, new Range( 0, len-1 ) ), request );
+      world.send( 0,
+                  PIXEL_DATA_MSG,
+                  IntegerBuf.rowSliceBuffer( sliceTmp, new Range( 0, len-1 ) ),
+                  request );
 
       ++chunkCount;
     }
