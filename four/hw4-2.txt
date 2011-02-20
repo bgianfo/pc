@@ -1,7 +1,6 @@
 Author: Brian Gianforcaro ( bjg1955@rit.edu )
 Assignment: Homework #4-2
 
-
         --------------------------------------------
         |  K  | T (msec) | Speedup |  Eff  | EDSF  |
         |------------------------------------------|
@@ -11,18 +10,28 @@ Assignment: Homework #4-2
         |------------------------------------------|
         |           MandelbrotSetClu2              |
         |------------------------------------------|
-        |  1  |   48771  | 1.19495 | 1.194 | xxxxx |
-        |  2  |   30187  | 1.93059 | 0.955 | 0.035 |
+        |  1  |   59671  | 0.97667 | 0.976 | xxxxx |
+        |  2  |   33199  | 1.75544 | 0.877 | 0.139 |
         |  4  |   20126  | 2.89570 | 0.723 | 0.127 |
-        |  8  |   11666  | 4.99562 | 0.624 | 0.085 |
-        | 16  |   14546  | 3.97917 | 0.248 | 0.201 |
+        |  8  |   12792  | 4.55589 | 0.569 | 0.107 |
+        | 16  |   14646  | 3.97917 | 0.248 | 0.201 |
         |------------------------------------------|
         |         MandelbrotSetClu2Overlap         |
         |------------------------------------------|
-        |  1  |          |         |       | xxxxx |
-        |  2  |          |         |       |       |
-        |  4  |          |         |       |       |
-        |  8  |          |         |       |       |
-        | 16  |          |         |       |       |
+        |  1  |   49074  | 1.18757 | 1.187 | xxxxx |
+        |  2  |   27974  | 2.08332 | 1.041 | -0.03 |
+        |  4  |   17442  | 3.34130 | 0.835 | 0.065 |
+        |  8  |   13175  | 4.42345 | 0.552 | 0.115 |
+        | 16  |   13253  | 4.39741 | 0.274 | 0.175 |
         --------------------------------------------
 
+        The timing numbers show a noticeable increase
+        in runtime performance and speedup for smaller
+        N's using the overlap technique. We can see a
+        small increase in efficiency, and reduction
+        of ESDF. It would appear that when we reach
+        larger N's, 16 and even 8 in some sense, the
+        communication overhead to each node is more
+        expensive than the actual computation and
+        performance starts to drop off.
+        
