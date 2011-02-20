@@ -17,6 +17,7 @@ import edu.rit.mp.buf.ObjectItemBuf;
 
 import edu.rit.pj.Comm;
 import edu.rit.pj.CommStatus;
+import edu.rit.pj.CommRequest;
 import edu.rit.pj.IntegerSchedule;
 import edu.rit.pj.ParallelRegion;
 import edu.rit.pj.ParallelSection;
@@ -127,6 +128,10 @@ public class MandelbrotSetClu2Overlap {
   // Table of hues.
   static int[] huetable;
 
+  // Slice chunks for workers
+  static int[][] slice; 
+  static int[][] sliceTmp;
+
   // Message tags.
   static final int WORKER_MSG = 0;
   static final int MASTER_MSG = 1;
@@ -195,71 +200,100 @@ public class MandelbrotSetClu2Overlap {
     huetable[maxiter] = HSB.pack( 1.0f, 1.0f, 0.0f );
   }
 
+
+  private static void swap() {
+    int[][] tmp = slice;
+    slice = sliceTmp;
+    sliceTmp = tmp;
+  }
+
+  private static void computeSlice( int ub, int lb, int len ) {
+
+    // Allocate storage for matrix row slice if necessary.
+    if ( slice == null || slice.length < len ) {
+      slice = new int [len][width];
+    }
+
+    // Compute all rows and columns in slice.
+    for ( int r = lb; r <= ub; ++r ) {
+
+      int[] slice_r = slice[r-lb];
+      double y = ycenter + (yoffset - r) / resolution;
+
+      for ( int c = 0; c < width; ++c ) {
+        double x = xcenter + (xoffset + c) / resolution;
+        // Iterate until convergence.
+        int i = 0;
+        double aold = 0.0;
+        double bold = 0.0;
+        double a = 0.0;
+        double b = 0.0;
+        double zmagsqr = 0.0;
+        while (i < maxiter && zmagsqr <= 4.0) {
+          ++ i;
+          a = aold*aold - bold*bold + x;
+          b = 2.0*aold*bold + y;
+          zmagsqr = a*a + b*b;
+          aold = a;
+          bold = b;
+        }
+
+        // Record number of iterations for pixel.
+        slice_r[c] = huetable[i];
+      }
+    }
+  }
+
   /**
    * Perform the worker section.
    * @exception  Exception Thrown if an I/O error occurred.
    */
   private static void workerSection() throws IOException {
-    // Storage for matrix row slice.
-    int[][] slice = null;
+
+    // Request to support async sends/recives
+    CommRequest request = new CommRequest();
+
+    ObjectItemBuf<Range> rangeBuf;
+    Range range;
+
+    // Seed loop algorithm with a range
+    rangeBuf = ObjectBuf.buffer();
+    world.receive( 0, WORKER_MSG, rangeBuf );
+    range = rangeBuf.item;
 
     // Process chunks from master.
     while ( true ) {
-
-      // Receive chunk range from master. If null, no more work.
-      ObjectItemBuf<Range> rangeBuf = ObjectBuf.buffer();
-      world.receive( 0, WORKER_MSG, rangeBuf );
-      Range range = rangeBuf.item;
 
       if ( range == null ) {
         break;
       }
 
-      int lb = range.lb();
-      int ub = range.ub();
       int len = range.length();
-      ++chunkCount;
+      // Compute the worker's current chunk
+      computeSlice( range.lb(), range.ub(), len );
 
-      // Allocate storage for matrix row slice if necessary.
-      if (slice == null || slice.length < len) {
-        slice = new int [len][width];
+      // Make sure our last async send is done before we
+      // start sending this section's data.
+      if ( chunkCount > 0 ) {
+        request.waitForFinish();
       }
 
-      // Compute all rows and columns in slice.
-      for ( int r = lb; r <= ub; ++r ) {
-
-        int[] slice_r = slice[r-lb];
-        double y = ycenter + (yoffset - r) / resolution;
-
-        for ( int c = 0; c < width; ++c ) {
-          double x = xcenter + (xoffset + c) / resolution;
-          // Iterate until convergence.
-          int i = 0;
-          double aold = 0.0;
-          double bold = 0.0;
-          double a = 0.0;
-          double b = 0.0;
-          double zmagsqr = 0.0;
-          while (i < maxiter && zmagsqr <= 4.0) {
-            ++ i;
-            a = aold*aold - bold*bold + x;
-            b = 2.0*aold*bold + y;
-            zmagsqr = a*a + b*b;
-            aold = a;
-            bold = b;
-          }
-
-          // Record number of iterations for pixel.
-          slice_r[c] = huetable[i];
-        }
-      }
+      // Swap slice & sliceTmp
+      swap();
 
       // Send chunk range back to master.
       world.send( 0, MASTER_MSG, rangeBuf );
 
+      // Receive chunk range from master. If null, no more work.
+      rangeBuf = ObjectBuf.buffer();
+      world.receive( 0, WORKER_MSG, rangeBuf );
+      range = rangeBuf.item;
+
       // Send pixel data to master.
       world.send( 0, PIXEL_DATA_MSG,
-                  IntegerBuf.rowSliceBuffer( slice, new Range( 0, len-1 ) ) );
+                  IntegerBuf.rowSliceBuffer( sliceTmp, new Range( 0, len-1 ) ), request );
+
+      ++chunkCount;
     }
   }
 
@@ -273,7 +307,7 @@ public class MandelbrotSetClu2Overlap {
     Range range;
 
     // Allocate all rows of image matrix.
-    matrix = new int [height][width];
+    matrix = new int[height][width];
 
     // Set up a schedule object to divide the row range into chunks.
     IntegerSchedule schedule = IntegerSchedule.runtime();
@@ -290,22 +324,29 @@ public class MandelbrotSetClu2Overlap {
       }
     }
 
+    Range nextRange;
+
     // Repeat until all workers have finished.
     while ( activeWorkers > 0 ) {
+
       // Receive a chunk range from any worker.
       ObjectItemBuf<Range> rangeBuf = ObjectBuf.buffer();
       CommStatus status = world.receive( null, MASTER_MSG, rangeBuf );
       worker = status.fromRank;
       range = rangeBuf.item;
 
+      // Schedule next range
+      nextRange  = schedule.next( worker );
+
+      // Send next chunk range to that specific worker.
+      world.send( worker, WORKER_MSG, ObjectBuf.buffer( nextRange ) );
+
       // Receive pixel data from that specific worker.
       world.receive( worker, PIXEL_DATA_MSG,
                      IntegerBuf.rowSliceBuffer( matrix, range ) );
 
-      // Send next chunk range to that specific worker. If null, no more
-      // work.
-      range = schedule.next( worker );
-      world.send( worker, WORKER_MSG, ObjectBuf.buffer( range ) );
+      range = nextRange;
+      // If null, no more work.
       if (range == null) {
         --activeWorkers;
       }
