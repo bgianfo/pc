@@ -202,9 +202,16 @@ public class MandelbrotSetClu2Overlap {
 
 
   private static void swap() {
-    int[][] tmp = slice;
-    slice = sliceTmp;
-    sliceTmp = tmp;
+
+    if ( sliceTmp == null || sliceTmp.length != slice.length ) {
+      sliceTmp = new int[slice.length][width];
+    }
+
+    for ( int i = 0; i < slice.length; ++i ) {
+      for ( int j = 0; j < width; ++j ) {
+        sliceTmp[i][j] = slice[i][j];
+      }
+    }
   }
 
   private static void computeSlice( int ub, int lb, int len ) {
