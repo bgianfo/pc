@@ -43,7 +43,7 @@ test: class
 #	$(JAVA) -Dpj.np=8  MandelbrotSetClu2Overlap $(TEST_ARGS)
 #	$(JAVA) -Dpj.np=16 MandelbrotSetClu2Overlap $(TEST_ARGS)
 
-bundle: hw3-1.txt hw4-2.txt MandelbrotSetClu2Overlap.java
+bundle: hw4-1.txt hw4-2.txt MandelbrotSetClu2Overlap.java
 	zip hw4.zip hw4-1.txt hw4-2.txt MandelbrotSetClu2Overlap.java
 
 clean:

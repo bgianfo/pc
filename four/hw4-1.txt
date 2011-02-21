@@ -10,16 +10,16 @@ Building Parallel Programs, Part III Exercises:
     mesh for various mesh sizes 
 
 
-      --------------------------------
-      |  N   | T (msec) | Iterations |
-      |-------------------------------
-      | 1260 |   60950  |       2539 |
-      | 1590 |  122652  |       3233 |
-      | 2000 |  266850  |       4099 |
-      | 2520 |  564505  |       5204 |
-      | 3180 |  993789  |       6618 |
-      | 4000 | 2048529  |       8388 |
-      --------------------------------
+                --------------------------------
+                |  N   | T (msec) | Iterations |
+                |-------------------------------
+                | 1260 |   60950  |       2539 |
+                | 1590 |  122652  |       3233 |
+                | 2000 |  266850  |       4099 |
+                | 2520 |  564505  |       5204 |
+                | 3180 |  993789  |       6618 |
+                | 4000 | 2048529  |       8388 |
+                --------------------------------
 
 
   a) Exercise 50 (p. 579)
@@ -27,6 +27,18 @@ Building Parallel Programs, Part III Exercises:
 
      Derive a formula for the calculation time for one iteration
      of the function of n, the mesh size.
+
+       (60950.0/2539.0)/1260.0^2 = 1.5120631129933631e-05
+      (122642.0/3233.0)/1590.0^2 = 1.5005113021442268e-05
+      (266850.0/4099.0)/2000.0^2 = 1.627531105147597e-05
+      (564505.0/5204.0)/2520.0^2 = 1.7081634444423143e-05
+      (993789.0/6618.0)/3180.0^2 = 1.4849546222848654e-05
+     (2048529.0/8388.0)/4000.0^2 = 1.526383673104435e-05 
+
+     average = 1.5599345433528e-05
+
+     T1( n ) = (n^2)*(1.5599345433528e-05)
+
 
   b) Exercise 51 (p. 579)
 
@@ -36,13 +48,41 @@ Building Parallel Programs, Part III Exercises:
      the message send time model for the "tardis" cluster. 
      Assume each process runs on a different processor. 
 
+     Java integer is 64bits
+
+     L = Latency 
+     B = Transfer speed for a bit of information
+
+     From Book, pg 403 & pg408
+     L = 2.08x10^-4 
+     B = 800.0/3.36e-5
+
+     T2( n, K ) = (L + (1/B)*((n^2)*64)) * ceil( log2( K ) )
+
+
   c) Exercise 52 (p. 579)
      Note: Formulas should be for speedup and efficiency of one
            iteration of the parallel version.
 
      Taking into account the calculation and the communication, derive 
      formulas for the speedup and efficiency of the parallel version as a 
-     function of n, the mesh sie, and K, the number of processors.
+     function of n, the mesh size, and K, the number of processors.
+
+                               T1( n )
+     Speedup( n, K ) = ------------------------
+                        T1( n )/K + T2( n, K )
+
+
+
+
+                                T1( n )
+                     ( ------------------------- )
+     Eff( n, K ) =       T1( n )/K + T2( n, K )
+                     ----------------------------- 
+                                 K
+
+
+
 
   d) Exercise 53 (p. 579)
      Note: Be sure to explain what happens to speedup and efficiency as K
@@ -50,9 +90,35 @@ Building Parallel Programs, Part III Exercises:
 
      What does the preceding model tell you about the program's scalability.
 
+     The model seems to be predicting that as we scale out in processors we
+     will never see linear or super linear speedups. The bandwidth required for
+     the computation will increase log scale as we increase the number of
+     processors. As we move out to larger and larger number of processors (K's)
+     the speedup will flatten out, this will flatten out earlier for smaller
+     problem sizes (N's). Thus our run times will taper out as our K increases.
+     However for small K's we will have almost linear speedup's and very good
+     efficiencies. 
+
+     This would lead me to understand that the program will have the best
+     performance per machine utilized on larger N's and moderately sized K's.
+    
+
   e) How many parallel processes should be used to obtain the smallest running time and
      what is the corresponding speedup for a 1260 × 1260-element mesh?
      For a 4000 × 4000-element mesh? (Note that the number of parallel processes must be an integer.)
+
+     1260 x 1260  
+
+      Parallel processes = 2
+      Runtime = 16.65
+      Speedup = 1.48
+
+     4000 x 4000  
+
+      Parallel processes = 4
+      Runtime = 148.41
+      Speedup = 1.681
+
 
   f) Exercise 54 (p. 579)
      Note: Complete the following table as part of the comparison.
@@ -63,26 +129,33 @@ Building Parallel Programs, Part III Exercises:
      with those measured in Table 30.1. What is causing the discrepancy if any? 
      ( Hint: The running times in Table 30.1 are for the entire program ).
 
-
         -----------------------------------------------------------------
         |            |         Measured         |     Predicted         |
         |---------------------------------------------------------------|
         |  N   |  K  | T (sec)  | Spdup |  Eff  | T (sec) | Spdup | Eff |
         |---------------------------------------------------------------|
-        | 1260 | seq |  61.469  | xxxxx | xxxxx |         | xxxxx | xxx |
-        | 1260 | 1   |  59.649  | 1.031 | 1.031 |         |       |     |
-        | 1260 | 2   |  33.681  | 1.825 | 0.913 |         |       |     |
-        | 1260 | 4   |  19.747  | 3.113 | 0.778 |         |       |     |
-        | 1260 | 8   |  13.799  | 4.455 | 0.557 |         |       |     |
-        | 1260 | 20  |  13.757  | 4.468 | 0.223 |         |       |     |
-        | 1260 | 40  |  13.143  | 4.677 | 0.117 |         |       |     |
+        | 1260 | seq |  61.469  | xxxxx | xxxxx | 24.765  | xxxxx | xxx |
+        | 1260 | 1   |  59.649  | 1.031 | 1.031 | 24.765  | 1.0 1 | xxx |
+        | 1260 | 2   |  33.681  | 1.825 | 0.913 | 16.650  | 1.487 |0.74 |
+        | 1260 | 4   |  19.747  | 3.113 | 0.778 | 14.726  | 1.681 |0.42 |
+        | 1260 | 8   |  13.799  | 4.455 | 0.557 | 15.898  | 1.557 |0.19 |
+        | 1260 | 20  |  13.757  | 4.468 | 0.223 | 22.576  | 1.096 |0.05 |
+        | 1260 | 40  |  13.143  | 4.677 | 0.117 | 26.225  | 0.944 |0.02 |
         |---------------------------------------------------------------|
-        | 4000 | seq | 2104.482 | xxxxx | xxxxx |         | xxxxx | xxx |
-        | 4000 | 1   | 2077.124 | 0.987 | 0.987 |         |       |     |
-        | 4000 | 2   | 1079.537 | 1.900 | 0.950 |         |       |     |
-        | 4000 | 4   | 547.380  | 3.747 | 0.937 |         |       |     |
-        | 4000 | 8   | 299.199  | 6.855 | 0.857 |         |       |     |
-        | 4000 | 20  | 161.101  | 12.731| 0.637 |         |       |     |
-        | 4000 | 40  | 155.433  | 17.768| 0.444 |         |       |     |
+        | 4000 | seq | 2104.482 | xxxxx | xxxxx | 249.589 | xxxxx | xxx |
+        | 4000 | 1   | 2077.124 | 0.987 | 0.987 | 249.589 | 1.0   | xxx |
+        | 4000 | 2   | 1079.537 | 1.900 | 0.950 | 167.802 | 1.487 |0.74 |
+        | 4000 | 4   | 547.380  | 3.747 | 0.937 | 148.413 | 1.681 |0.42 |
+        | 4000 | 8   | 299.199  | 6.855 | 0.857 | 160.223 | 1.557 |0.19 |
+        | 4000 | 20  | 161.101  | 12.731| 0.637 | 227.520 | 1.096 |0.05 |
+        | 4000 | 40  | 155.433  | 17.768| 0.444 | 264.288 | 0.944 |0.02 |
         -----------------------------------------------------------------
 
+     The speedup's and efficiencies of the predicted model are consistently
+     slower than the measured, in a very large sense. Something seems to be
+     off about the predicted equations I have derived. Judging by the vast
+     discrepancy between the measured and predicted sequential, my derivation
+     for the compute time is very flawed. Although I can not seem to find
+     a different or similar function that will model the computation time
+     and produce the correct numbers as the initial table provided at the
+     start/top of this problem set.
